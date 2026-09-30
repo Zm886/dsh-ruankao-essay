@@ -30,7 +30,7 @@ const SKILLS = [
     dir: "ruankao-essay-bank",
     name: "ruankao-essay-bank",
     description:
-      "软考系统分析师论文题库与素材库。Look up Chinese Soft Exam (软考) 系统分析师 essay topics and reusable material: the 2016–2026 真题 table, per-topic theory skeletons and 扣分雷区, 29 knowledge cards distilled from sample essays, 24 reusable project backgrounds with 规模/周期, and the 10 finished essays in this workspace. Use when the user asks which 论文题目 exist, what theory points a topic needs, what project or quantified data to cite, or before writing any 软考系分 essay.",
+      "软考系统分析师论文题库与写作规范。Look up Chinese Soft Exam (软考) 系统分析师 essay topics and reusable material: the 2016–2026 真题 table, per-topic theory skeletons, writing specification and scoring pitfalls, plus the project-background guidance needed before writing. Use when the user asks which 论文题目 exist, what theory points a topic needs, what project or quantified data to cite, or before writing any 软考系分 essay.",
   },
 ];
 
