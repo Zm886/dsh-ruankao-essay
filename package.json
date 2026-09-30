@@ -41,6 +41,7 @@
     "assets/ruankao-essay-writing/SKILL.md",
     "assets/ruankao-essay-writing/references/writing-rules.md",
     "assets/ruankao-essay-writing/scripts/make-essay-doc.ps1",
+    "assets/ruankao-essay-writing/scripts/check-essay.ps1",
     "assets/ruankao-essay-review/SKILL.md",
     "locale",
     "icon.svg",
