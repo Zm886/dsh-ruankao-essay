@@ -5,13 +5,14 @@
 [![Version](https://img.shields.io/badge/version-0.1.0-7A5CFF.svg)](CHANGELOG.md)
 [![DSH](https://img.shields.io/badge/DSH-Host%20bundle-000000.svg)](https://github.com/deepseek-ai/deepseek-harness)
 
-把「软考系统分析师论文」的题库、写作规则与成稿模板打包成 DSH 插件，装上以后在任意会话里都能直接调用。
+把「软考系统分析师论文」的题库、写作规范与交付流程打包成 DSH 插件，装上以后在任意会话里都能直接调用；另附一个 Web UI 里的题库速查面板。
 
 - **插件名（包名）**：`dsh-ruankao-essay`
 - **Host 插件行 id**：`ruankao-essay`
-- **提供的技能**：`ruankao-essay-writing`（写作／改写总纲）、`ruankao-essay-bank`（题库与素材库）
-- **形态**：Host-only bundle（纯 JS，无构建步骤、无第三方依赖）
-- **版本**：0.1.0，变更见 [CHANGELOG.md](CHANGELOG.md)
+- **提供的技能**：`ruankao-essay-writing`（写作／改写总纲）、`ruankao-essay-bank`（题库与写作规范）
+- **Client 半**：`client.js`，在 `conversation.composer.dock` 注册「题库速查」面板
+- **形态**：Host 半纯 JS 无依赖、无构建步骤；Client 半是单文件浏览器模块
+- **版本**：0.1.0，变更见 [CHANGELOG.md](CHANGELOG.md)　·　安全策略见 [SECURITY.md](SECURITY.md)　·　贡献指南见 [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## 一、它解决什么问题
 
@@ -23,6 +24,8 @@
 | `ruankao-essay-writing` | 写：10 段式结构、字数口径、语气禁忌、子题目回应规则、Word 交付脚本 | 动笔与交付时 |
 
 两者配合的完整链路：**查题 → 定骨架 → 配实例 → 成稿 → 自检 → 生成 .doc**。
+
+此外，插件在 DSH Web UI 的对话输入区上方提供一个**题库速查面板**：点开后可切换「历年真题 / 题型骨架 / 写作规格」三个页签，用于在写之前快速定位题目与要点（内容与仓库内的公开版索引一致）。
 
 ## 二、安装
 
@@ -54,6 +57,10 @@ Copy-Item "D:\project\deeepseek\dsh-plugins\dsh-ruankao-essay\assets\*" "$env:US
 
 两种方式的资产完全一致：`SKILL.md` 带 YAML frontmatter（供文件系统发现），插件提供者读取时会自动剥掉 frontmatter。
 
+> 本插件**不发布到 npm**：`package.json` 保持 `private: true`，防止误发布；请用方式 A（本地 bundle）或方式 B（技能目录），或直接克隆本仓库。
+>
+> 这样做的原因：npm 打包只看 `package.json` 的 `files` 白名单，不看 `.gitignore`，一旦白名单写成目录就可能把本机资料一起发出去；仓库分发没有这条通道。
+
 ## 三、目录结构
 
 ```
@@ -61,12 +68,17 @@ dsh-ruankao-essay/
 ├─ package.json          # dsh.bundle.patch、meta、icon、files、repository
 ├─ cordis.patch.yml      # 向 profile 插入 id: ruankao-essay 的 Host 插件行
 ├─ index.js              # Cordis 插件：ctx.skills.registerProvider(...) 注册两个技能
+├─ client.js             # Client 半：在 Web UI 注册题库速查面板
 ├─ icon.svg              # 插件卡片图标
 ├─ locale/{zh,en}.json   # 插件卡片标题与描述
 ├─ CHANGELOG.md          # 版本变更记录
+├─ SECURITY.md           # 安全策略与漏洞报告方式
+├─ CONTRIBUTING.md       # 贡献指南与内容边界
 ├─ scripts/
-│  └─ verify-manifest.mjs        # 清单／技能资产／脚本 BOM 校验
-├─ .github/workflows/ci.yml      # CI：Linux 校验 + Windows 端到端测试
+│  └─ verify-manifest.mjs        # 清单／技能资产／脚本 BOM／Client 半 校验
+├─ .github/workflows/
+│  ├─ ci.yml                     # CI：Linux 校验 + Windows 端到端测试
+│  └─ github-release.yml         # 打 tag 时只创建 GitHub Release（不发 npm）
 ├─ tests/
 │  ├─ fixtures/sample-essay.md   # 公开的 10 段测试样例
 │  └─ out/                       # 测试产物（已 gitignore）
@@ -110,11 +122,13 @@ dsh-ruankao-essay/
 ### 本地一条命令跑全部校验
 
 ```powershell
+node --check index.js
+node --check client.js
 node scripts/verify-manifest.mjs
-# 校验清单字段、加载器补丁、技能资产与 frontmatter、脚本 BOM
+# 校验清单字段、加载器补丁、技能资产与 frontmatter、脚本 BOM、Client 半
 ```
 
-它检查 7 项：`package.json` 的 `dsh.bundle.patch`／`manifestVersion`／`meta`／`icon`／`main` 与依赖声明、`cordis.patch.yml` 的 id 与包名、每个技能都有对应 `assets/<name>/SKILL.md` 且 frontmatter 的 `name` 与目录一致、生成脚本存在且带 UTF-8 BOM、必备文件齐全、不应入库的本地资料未被 git 跟踪。
+它检查 9 项：`package.json` 的 `dsh.bundle.patch`／`manifestVersion`／`meta`／`icon`／`main` 与依赖声明、`cordis.patch.yml` 的 id 与包名、每个技能都有对应 `assets/<name>/SKILL.md` 且 frontmatter 的 `name` 与目录一致、生成脚本存在且带 UTF-8 BOM、`dsh.client` 声明与 `client.js` 的模块 id／槽位一致、必备文件齐全、`references/` 下只有公开文件被跟踪、以及**发布白名单只包含仓库已跟踪的文件**（防止把本机资料打包出去）。
 
 ### 端到端测试生成脚本
 
@@ -129,8 +143,10 @@ node scripts/verify-manifest.mjs
 
 | 作业 | 运行环境 | 内容 |
 |---|---|---|
-| 清单与技能资产校验 | ubuntu-latest | `node --check index.js`、解析 JSON、跑 `verify-manifest.mjs`、确认不应入库的本地资料未被跟踪 |
+| 清单与技能资产校验 | ubuntu-latest | `node --check index.js`、解析 JSON、跑 `verify-manifest.mjs`、确认 `references/` 下只有公开文件被跟踪 |
 | 生成脚本端到端测试 | windows-latest | 校验脚本保留 UTF-8 BOM，用 `tests/fixtures/sample-essay.md` 生成 `.doc`，断言段数为 10、正文无直引号且有中文引号 |
+
+另有 `.github/workflows/github-release.yml`：推送 `v*` tag 时先跑校验，再创建一个 GitHub Release（仅源码快照，不发布到 npm）。
 
 ### 已知限制
 

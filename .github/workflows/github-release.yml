@@ -1,0 +1,38 @@
+name: GitHub Release
+
+# 推送 v* tag 时创建一个 GitHub Release（只发布源码快照，不发布到 npm）。
+# 本插件仅通过仓库分发：克隆后按 README 的方式 A / B 安装。
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: 创建 GitHub Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 发布前校验
+        run: |
+          node --check index.js
+          node --check client.js
+          node scripts/verify-manifest.mjs
+
+      - name: 创建 Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$TAG" \
+            --title "$TAG" \
+            --notes "发布内容见仓库的 CHANGELOG.md。本仓库不发布到 npm；安装方式见 README。" \
+            --verify-tag

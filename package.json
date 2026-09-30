@@ -2,11 +2,12 @@
   "name": "dsh-ruankao-essay",
   "version": "0.1.0",
   "private": true,
-  "description": "软考系统分析师论文助手：题库查询 + 10 段式成稿与 Word 交付（two skills: ruankao-essay-writing, ruankao-essay-bank）",
+  "description": "软考系统分析师论文助手：题库查询 + 10 段式写作与 Word 交付（two skills: ruankao-essay-writing, ruankao-essay-bank）",
   "type": "module",
   "main": "index.js",
   "exports": {
     ".": "./index.js",
+    "./client": "./client.js",
     "./package.json": "./package.json",
     "./locale/*.json": "./locale/*.json"
   },
@@ -17,6 +18,13 @@
     "manifestVersion": 1,
     "bundle": {
       "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ]
     }
   },
   "meta": {
@@ -26,18 +34,25 @@
   "icon": "./icon.svg",
   "files": [
     "index.js",
+    "client.js",
     "cordis.patch.yml",
-    "assets",
+    "assets/ruankao-essay-bank/SKILL.md",
+    "assets/ruankao-essay-bank/references/topic-index-lite.md",
+    "assets/ruankao-essay-writing/SKILL.md",
+    "assets/ruankao-essay-writing/references/writing-rules.md",
+    "assets/ruankao-essay-writing/scripts/make-essay-doc.ps1",
     "locale",
     "icon.svg",
-    "README.md"
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
   ],
   "keywords": [
     "dsh",
     "dsh-plugin",
-    "软考",
-    "系统分析师",
-    "论文",
+    "soft-exam",
+    "ruankao",
+    "essay",
     "skill"
   ],
   "repository": {

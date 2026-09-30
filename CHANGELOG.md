@@ -5,11 +5,18 @@
 
 ## [Unreleased]
 
+### 新增
+
+- **Client 面板**：`client.js` 在 `conversation.composer.dock` 注册「题库速查」面板，含「历年真题／题型骨架／写作规格」三个页签；数据与仓库内公开版索引一致。
+- **明确不发布 npm**：`package.json` 保持 `private: true`（防止误发布），并移除了 npm 发布流程；新增 `.github/workflows/github-release.yml`，打 tag 时只创建 GitHub Release。原因是 npm 打包只看 `files` 白名单、不看 `.gitignore`，写目录会把本机资料一起发出去。
+- **仓库文档**：新增 `SECURITY.md`（安全策略与私密漏洞报告方式）与 `CONTRIBUTING.md`（开发流程、内容边界、PR 检查表、发布步骤）。
+- `verify-manifest.mjs` 增加 Client 半校验（模块 id 必须等于包名、必须声明槽位与 `dsh.client.inject`、必须在 `files` 白名单内），共 8 项。
+
 ### 计划中
 
-- 可选的 Client 面板：在 DSH Web UI 侧边栏可视化浏览题库（基于 `templates/decoration` 起步）。
 - 技能三 `ruankao-essay-review`：按阅卷评分口径对成稿逐段自评并给出修改建议。
-- 本地私有题库的加载引导：当 `references/` 下缺少完整题库时，给出补齐指引与降级说明。
+- Client 面板的文案接入 Client locale 服务，便于多语言。
+- 本地参考资料缺失时的补齐指引与降级说明。
 
 ## [0.1.0] - 2026-09-30
 
