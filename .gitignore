@@ -20,3 +20,6 @@ assets/ruankao-essay-bank/references/type-index.md
 assets/ruankao-essay-bank/references/essay-bank.md
 assets/ruankao-essay-bank/references/exam-points.md
 assets/ruankao-essay-bank/references/courseware-3-4.md
+
+# CI 与本地测试产物
+tests/out/

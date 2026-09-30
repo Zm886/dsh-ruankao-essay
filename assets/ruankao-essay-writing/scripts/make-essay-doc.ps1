@@ -18,9 +18,22 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# 相对路径必须基于 PowerShell 的当前位置解析：
+# .NET 的当前目录与 PowerShell 位置可能不同（[System.IO.File] 用的是前者），
+# 因此这里统一转成绝对路径，并确保输出目录存在。
+function Resolve-FullPath([string]$Path) {
+  if ([System.IO.Path]::IsPathRooted($Path)) { return [System.IO.Path]::GetFullPath($Path) }
+  return [System.IO.Path]::GetFullPath((Join-Path (Get-Location).Path $Path))
+}
+
 if (-not (Test-Path -LiteralPath $MdPath)) { throw "找不到 Markdown 文件：$MdPath" }
 $MdPath = (Resolve-Path -LiteralPath $MdPath).Path
 if (-not $OutPath) { $OutPath = [System.IO.Path]::ChangeExtension($MdPath, '.doc') }
+$OutPath = Resolve-FullPath $OutPath
+$outDir = Split-Path -Parent $OutPath
+if ($outDir -and -not (Test-Path -LiteralPath $outDir)) {
+  New-Item -ItemType Directory -Force -Path $outDir | Out-Null
+}
 
 # 读源稿：跳过 HTML 注释行，去掉空行与行首标记
 $lines = Get-Content -LiteralPath $MdPath -Encoding UTF8 |

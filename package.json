@@ -40,6 +40,14 @@
     "论文",
     "skill"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Zm886/dsh-ruankao-essay.git"
+  },
+  "homepage": "https://github.com/Zm886/dsh-ruankao-essay#readme",
+  "bugs": {
+    "url": "https://github.com/Zm886/dsh-ruankao-essay/issues"
+  },
   "license": "MIT",
   "peerDependencies": {
     "@deepseek-ai/cordis": "*",

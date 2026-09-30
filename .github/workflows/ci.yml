@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  manifest-and-skills:
+    name: 清单与技能资产校验
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 语法检查 index.js
+        run: node --check index.js
+
+      - name: 解析 JSON 清单
+        run: |
+          node -e "const fs=require('fs');for(const p of ['package.json','locale/zh.json','locale/en.json']){JSON.parse(fs.readFileSync(p,'utf8'));}console.log('JSON 全部可解析')"
+
+      - name: 校验清单与技能一致性
+        run: node scripts/verify-manifest.mjs
+
+      - name: 确认私有题库文件未被跟踪
+        run: |
+          if git ls-files | grep -E '(courseware-3-4|exam-points|references/essay-bank|references/type-index)\.md$'; then
+            echo "::error::第三方衍生题库文件不应进入仓库"
+            exit 1
+          fi
+          echo "未跟踪私有题库文件"
+
+  word-script:
+    name: 生成脚本端到端测试（Windows PowerShell 5.1）
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 生成脚本必须保持 UTF-8 BOM
+        shell: pwsh
+        run: |
+          $bytes = [System.IO.File]::ReadAllBytes('assets/ruankao-essay-writing/scripts/make-essay-doc.ps1')
+          if (-not ($bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF)) {
+            throw '脚本缺少 UTF-8 BOM，Windows PowerShell 5.1 下会误读中文'
+          }
+          Write-Host 'BOM 正确'
+
+      - name: 用测试样例生成 .doc 并断言段数与字数
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path tests\out | Out-Null
+          $output = & .\assets\ruankao-essay-writing\scripts\make-essay-doc.ps1 -MdPath .\tests\fixtures\sample-essay.md -OutPath .\tests\out\sample.doc
+          $output | ForEach-Object { Write-Host $_ }
+          if (-not ($output -match '段落数:\s*10')) { throw '生成的文档段数不是 10' }
+          if (-not (Test-Path tests\out\sample.doc)) { throw '未生成 .doc 文件' }
+
+          $doc = Get-Content -LiteralPath tests\out\sample.doc -Raw
+          if ($doc -notmatch '<p>') { throw '.doc 内容异常：没有段落标签' }
+
+          # 只检查正文：HTML 标记属性里的直引号属正常
+          $body = [regex]::Match($doc, '(?s)<body>(.*)</body>').Groups[1].Value
+          $quotes = [regex]::Matches($body, '"').Count
+          $chineseQuotes = [regex]::Matches($body, "[\u201C\u201D]").Count
+          Write-Host "正文直引号 $quotes 个，中文引号 $chineseQuotes 个"
+          if ($quotes -ne 0) { throw '正文中仍有直引号，中文引号替换未生效' }
+          if ($chineseQuotes -eq 0) { throw '正文没有中文引号，样例中的直引号未被替换' }
+          Write-Host '端到端测试通过'
