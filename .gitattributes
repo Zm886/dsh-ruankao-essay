@@ -1,0 +1,7 @@
+﻿# 保持脚本与文档的原始行尾与 BOM，避免 Windows 上被改写
+* text=auto eol=lf
+*.ps1 text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.svg text eol=lf

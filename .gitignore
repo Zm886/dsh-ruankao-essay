@@ -1,0 +1,22 @@
+﻿# 依赖与构建产物
+node_modules/
+dist/
+lib/
+*.log
+
+# 编辑器与系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# 本地生成物（论文 .doc 输出等）
+out/
+*.doc
+*_v2.doc
+
+# === 本地私有：第三方课件与他人范文的提炼内容，不随公开仓库分发 ===
+assets/ruankao-essay-bank/references/type-index.md
+assets/ruankao-essay-bank/references/essay-bank.md
+assets/ruankao-essay-bank/references/exam-points.md
+assets/ruankao-essay-bank/references/courseware-3-4.md

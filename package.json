@@ -1,0 +1,49 @@
+{
+  "name": "dsh-ruankao-essay",
+  "version": "0.1.0",
+  "private": true,
+  "description": "软考系统分析师论文助手：题库查询 + 10 段式成稿与 Word 交付（two skills: ruankao-essay-writing, ruankao-essay-bank）",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dsh": {
+    "manifestVersion": 1,
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "meta": {
+    "title": "软考系分论文助手",
+    "description": "题库索引 + 10 段式论文写作、改写与 Word 交付"
+  },
+  "icon": "./icon.svg",
+  "files": [
+    "index.js",
+    "cordis.patch.yml",
+    "assets",
+    "scripts",
+    "locale",
+    "icon.svg",
+    "README.md"
+  ],
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "软考",
+    "系统分析师",
+    "论文",
+    "skill"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "*",
+    "@deepseek-ai/dsh-skill": "*"
+  }
+}

@@ -1,0 +1,6 @@
+# 软考系分论文助手 —— 本插件向当前 profile 贡献的加载器补丁层
+# 插入一行 Host 插件；插件本身把包内 assets/ 注册为两个技能。
+- insert:
+    - id: ruankao-essay
+      name: 'dsh-ruankao-essay'
+      config: {}
