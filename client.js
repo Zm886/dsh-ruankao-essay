@@ -154,22 +154,24 @@ window.__ModuleLoader__.load({
     }
 
     return {
-      inject: ['slots', 'locale'],
+      // 只依赖 slots：与 DSH 自带 decoration 模板一致的最小依赖形态，减少激活失败面。
+      inject: ['slots'],
       apply(ctx) {
-        // 文案：优先走 Client locale 字典；注册失败（例如热重载重复注册）时退回恒等翻译，
-        // 保证面板本身仍能渲染，不影响附件功能的可用性。
-        let t = (key) => key;
+        // 文案：宿主提供 locale 服务时优先走 Client locale 字典（可随语言切换），
+        // 否则退回内置中文文案。两种情况都不影响面板渲染。
+        const fallback = DICT.zh;
+        let t = (key, params) => {
+          const template = fallback[key] ?? key;
+          if (!params) return template;
+          return template.replace(/\{(\w+)\}/g, (match, name) => (name in params ? String(params[name]) : match));
+        };
         try {
-          ctx.effect(() => ctx.locale.register(NS, DICT), 'ruankao-essay: locale dictionary');
-          t = ctx.locale.bind(NS);
+          if (ctx.locale && typeof ctx.locale.register === 'function') {
+            ctx.effect(() => ctx.locale.register(NS, DICT), 'ruankao-essay: locale dictionary');
+            t = ctx.locale.bind(NS);
+          }
         } catch (error) {
-          ctx.logger?.warn?.('ruankao-essay: locale 注册失败，使用内置文案：' + String(error));
-          const fallback = DICT.zh;
-          t = (key, params) => {
-            const template = fallback[key] ?? key;
-            if (!params) return template;
-            return template.replace(/\{(\w+)\}/g, (match, name) => (name in params ? String(params[name]) : match));
-          };
+          ctx.logger?.warn?.('ruankao-essay: locale 不可用，使用内置文案：' + String(error));
         }
         ctx.slots.inject('conversation.composer.dock', () => ctx.slots.register({
           name: 'conversation.composer.dock',
