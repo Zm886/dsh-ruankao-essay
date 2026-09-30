@@ -1,22 +1,29 @@
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
-import { BUNDLED_SKILL_RANK } from "@deepseek-ai/dsh-skill";
 
 /**
  * 软考系统分析师论文助手 —— 技能提供者插件。
  *
- * 把一个 workspace 目录里的 SKILL.md 目录树注册成两个技能：
+ * 把一个 workspace 目录里的 SKILL.md 目录树注册成三个技能：
  * - ruankao-essay-writing：写作与改写总纲
- * - ruankao-essay-bank：题库、理论骨架、项目素材
+ * - ruankao-essay-bank：题库、理论骨架、写作规范
+ * - ruankao-essay-review：成稿的逐段自评与改写建议
  *
  * 技能正文与其 references/ 都在包的 assets/ 下，按目录资源基（resourceBase）
  * 暴露，模型可用 file 工具按相对路径读取。
+ *
+ * 本插件**不 import 任何 @deepseek-ai/* 包**：profile 安装时这些包由宿主提供，
+ * 解析方式随宿主而异；不依赖它们能让插件在各种安装方式下都正常加载。
  *
  * @module dsh-ruankao-essay
  */
 
 const PROVIDER_NAME = "ruankao-essay";
-const ASSETS_BASE = new URL("../assets/", import.meta.url);
+/** index.js 在包根目录，资源基是同级 ./assets/（不是 ../assets/）。 */
+const ASSETS_BASE = new URL("./assets/", import.meta.url);
+
+/** 与 @deepseek-ai/dsh-skill 的 BUNDLED_SKILL_RANK 对齐：打包型技能提供者的标准优先级。 */
+const SKILL_RANK = 600;
 
 /** 本插件提供的技能清单（目录名＝技能名）。 */
 const SKILLS = [
@@ -60,7 +67,7 @@ function candidateOf(entry) {
     provider: PROVIDER_NAME,
     source: "plugin",
     resourceBase: { kind: "directory", path: fileURLToPath(dir) },
-    rank: BUNDLED_SKILL_RANK,
+    rank: SKILL_RANK,
     locator: new URL("SKILL.md", dir),
   };
 }

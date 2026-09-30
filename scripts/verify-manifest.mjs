@@ -40,7 +40,7 @@ if (!pkg.meta?.title || !pkg.meta?.description) fail("package.json 缺少 meta.t
 if (!pkg.icon) fail("package.json 缺少 icon");
 else if (!existsSync(join(root, pkg.icon))) fail(`icon 文件不存在：${pkg.icon}`);
 if (!pkg.main) fail("package.json 缺少 main");
-if (!pkg.peerDependencies?.["@deepseek-ai/dsh-skill"]) fail("package.json 缺少 @deepseek-ai/dsh-skill 依赖声明");
+if (!/inject\s*=\s*\[[^\]]*"skills"/.test(read("index.js"))) fail("index.js 必须通过 inject 声明对 skills 服务的依赖");
 ok(`manifest: ${pkg.name}@${pkg.version}`);
 
 // 2) cordis.patch.yml

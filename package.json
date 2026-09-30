@@ -66,9 +66,5 @@
   "bugs": {
     "url": "https://github.com/Zm886/dsh-ruankao-essay/issues"
   },
-  "license": "MIT",
-  "peerDependencies": {
-    "@deepseek-ai/cordis": "*",
-    "@deepseek-ai/dsh-skill": "*"
-  }
+  "license": "MIT"
 }
