@@ -156,8 +156,21 @@ window.__ModuleLoader__.load({
     return {
       inject: ['slots', 'locale'],
       apply(ctx) {
-        ctx.effect(() => ctx.locale.register(NS, DICT), 'ruankao-essay: locale dictionary');
-        const t = ctx.locale.bind(NS);
+        // 文案：优先走 Client locale 字典；注册失败（例如热重载重复注册）时退回恒等翻译，
+        // 保证面板本身仍能渲染，不影响附件功能的可用性。
+        let t = (key) => key;
+        try {
+          ctx.effect(() => ctx.locale.register(NS, DICT), 'ruankao-essay: locale dictionary');
+          t = ctx.locale.bind(NS);
+        } catch (error) {
+          ctx.logger?.warn?.('ruankao-essay: locale 注册失败，使用内置文案：' + String(error));
+          const fallback = DICT.zh;
+          t = (key, params) => {
+            const template = fallback[key] ?? key;
+            if (!params) return template;
+            return template.replace(/\{(\w+)\}/g, (match, name) => (name in params ? String(params[name]) : match));
+          };
+        }
         ctx.slots.inject('conversation.composer.dock', () => ctx.slots.register({
           name: 'conversation.composer.dock',
           id: 'ruankao-topic-bank',
