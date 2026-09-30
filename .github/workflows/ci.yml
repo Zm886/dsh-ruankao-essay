@@ -15,7 +15,7 @@ jobs:
     name: 清单与技能资产校验
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: actions/setup-node@v4
         with:
@@ -26,7 +26,7 @@ jobs:
 
       - name: 解析 JSON 清单
         run: |
-          node -e "const fs=require('fs');for(const p of ['package.json','locale/zh.json','locale/en.json']){JSON.parse(fs.readFileSync(p,'utf8'));}console.log('JSON 全部可解析')"
+          node -e "const fs=require('fs');for(const p of ['package.json','locale/zh.json','locale/en.json']){JSON.parse(fs.readFileSync(p,'utf8'));}console.log('JSON OK')"
 
       - name: 校验清单与技能一致性
         run: node scripts/verify-manifest.mjs
@@ -34,43 +34,52 @@ jobs:
       - name: 确认私有题库文件未被跟踪
         run: |
           if git ls-files | grep -E '(courseware-3-4|exam-points|references/essay-bank|references/type-index)\.md$'; then
-            echo "::error::第三方衍生题库文件不应进入仓库"
+            echo "::error::third-party derived knowledge files must not be tracked"
             exit 1
           fi
-          echo "未跟踪私有题库文件"
+          echo "no private knowledge files tracked"
 
   word-script:
     name: 生成脚本端到端测试（Windows PowerShell 5.1）
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - name: 生成脚本必须保持 UTF-8 BOM
+      # 注意：GitHub 把 run 脚本写成无 BOM 的临时 .ps1，Windows PowerShell 5.1 会按 ANSI 误读其中的中文。
+      # 因此本作业的驱动脚本一律只用 ASCII 报错信息，并显式用 powershell.exe（5.1）执行被测脚本。
+      - name: Check that the script keeps its UTF-8 BOM
         shell: pwsh
         run: |
-          $bytes = [System.IO.File]::ReadAllBytes('assets/ruankao-essay-writing/scripts/make-essay-doc.ps1')
-          if (-not ($bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF)) {
-            throw '脚本缺少 UTF-8 BOM，Windows PowerShell 5.1 下会误读中文'
-          }
-          Write-Host 'BOM 正确'
+          $script = Join-Path $PWD 'assets/ruankao-essay-writing/scripts/make-essay-doc.ps1'
+          $bytes = [System.IO.File]::ReadAllBytes($script)
+          $hasBom = $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF
+          if (-not $hasBom) { throw 'make-essay-doc.ps1 must be saved as UTF-8 with BOM' }
+          Write-Host "BOM ok ($($bytes.Length) bytes)"
 
-      - name: 用测试样例生成 .doc 并断言段数与字数
-        shell: powershell
+      - name: Generate a .doc with Windows PowerShell 5.1 and assert the output
+        shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path tests\out | Out-Null
-          $output = & .\assets\ruankao-essay-writing\scripts\make-essay-doc.ps1 -MdPath .\tests\fixtures\sample-essay.md -OutPath .\tests\out\sample.doc
+          $root = $PWD.Path
+          $script = Join-Path $root 'assets/ruankao-essay-writing/scripts/make-essay-doc.ps1'
+          $fixture = Join-Path $root 'tests/fixtures/sample-essay.md'
+          $out = Join-Path $root 'tests/out/sample.doc'
+          New-Item -ItemType Directory -Force -Path (Join-Path $root 'tests/out') | Out-Null
+
+          $output = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script -MdPath $fixture -OutPath $out
           $output | ForEach-Object { Write-Host $_ }
-          if (-not ($output -match '段落数:\s*10')) { throw '生成的文档段数不是 10' }
-          if (-not (Test-Path tests\out\sample.doc)) { throw '未生成 .doc 文件' }
 
-          $doc = Get-Content -LiteralPath tests\out\sample.doc -Raw
-          if ($doc -notmatch '<p>') { throw '.doc 内容异常：没有段落标签' }
+          if (-not (Test-Path $out)) { throw 'sample.doc was not produced' }
 
-          # 只检查正文：HTML 标记属性里的直引号属正常
+          $doc = Get-Content -LiteralPath $out -Raw
+          $paragraphs = [regex]::Matches($doc, '<p>').Count
+          if ($paragraphs -ne 10) { throw "expected 10 paragraphs, got $paragraphs" }
+
+          # Only the body matters: straight quotes inside HTML attributes are expected.
           $body = [regex]::Match($doc, '(?s)<body>(.*)</body>').Groups[1].Value
-          $quotes = [regex]::Matches($body, '"').Count
-          $chineseQuotes = [regex]::Matches($body, "[\u201C\u201D]").Count
-          Write-Host "正文直引号 $quotes 个，中文引号 $chineseQuotes 个"
-          if ($quotes -ne 0) { throw '正文中仍有直引号，中文引号替换未生效' }
-          if ($chineseQuotes -eq 0) { throw '正文没有中文引号，样例中的直引号未被替换' }
-          Write-Host '端到端测试通过'
+          $straight = [regex]::Matches($body, '"').Count
+          $chinese = [regex]::Matches($body, "[\u201C\u201D]").Count
+          Write-Host "body: straight quotes = $straight, chinese quotes = $chinese"
+          if ($straight -ne 0) { throw 'body still contains straight quotes' }
+          if ($chinese -eq 0) { throw 'straight quotes in the fixture were not converted' }
+
+          Write-Host 'end-to-end test passed'

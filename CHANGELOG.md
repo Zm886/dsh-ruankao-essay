@@ -26,6 +26,12 @@
 - **GitHub Actions CI**：Linux 侧做语法与清单校验，Windows 侧用 Windows PowerShell 5.1 跑生成脚本端到端测试。
 - 展示元数据：`icon.svg`、`locale/zh.json`、`locale/en.json`；`LICENSE`（MIT）、`.gitignore`、`.gitattributes`、README。
 
+### 修复
+
+- `make-essay-doc.ps1` 的相对输出路径：`[System.IO.File]` 使用 .NET 当前目录而 PowerShell 位置可能不同，导致相对 `-OutPath` 写到错误位置；现统一转绝对路径并自动创建输出目录。
+- CI 的 Windows 作业：GitHub 会把 `run:` 脚本写成无 BOM 的临时 .ps1，Windows PowerShell 5.1 按 ANSI 误读其中的中文而报语法错误；现驱动脚本只用 ASCII 报错信息，并显式用 `powershell.exe`（5.1）执行被测脚本，全部改用绝对路径。
+- CI 断言原先误把 HTML 属性里的直引号当成正文直引号，现只检查 `<body>` 内的文本。
+
 ### 说明
 
 - 本仓库为**公开安全版**：第三方课件与他人范文提炼出的 4 份题库文件（`type-index.md`、`essay-bank.md`、`exam-points.md`、`courseware-3-4.md`）留在本地，已写入 `.gitignore`，且不在 git 历史与对象库中。
