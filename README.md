@@ -73,11 +73,11 @@ dsh-ruankao-essay/
 └─ assets/
    ├─ ruankao-essay-writing/          # 技能一：写
    │  ├─ SKILL.md
-   │  ├─ references/{writing-rules.md, quick-cards.md}
+   │  ├─ references/writing-rules.md
    │  └─ scripts/make-essay-doc.ps1   # Markdown → Word 可打开的 .doc（含段数与字数自检）
    └─ ruankao-essay-bank/             # 技能二：查
       ├─ SKILL.md
-      └─ references/{topic-index-lite.md, finished-essays.md, 以及本地私有的 4 份题库文件}
+      └─ references/topic-index-lite.md   # 另有 6 份本地私有的题库／速记卡文件，不随仓库分发
 ```
 
 脚本放在写作技能目录内，因此无论是「插件资源基」还是「技能目录」安装，`<skill-directory>/scripts/make-essay-doc.ps1` 都能正确定位。
@@ -143,7 +143,7 @@ node scripts/verify-manifest.mjs
 
 本仓库是**公开安全版**：只包含插件代码、两个技能的骨架、写作规格、公开的历年真题题名、通用理论骨架，以及作者自有的项目素材。
 
-以下 4 份文件由第三方课件与他人范文提炼而来，**留在本地、不随仓库分发**（已写入 `.gitignore`，且不在 git 历史中）：
+以下 6 份文件属于**本地私有**，不随仓库分发（已写入 `.gitignore`，且已从 git 历史中清除）：
 
 | 本地文件 | 内容 |
 |---|---|
@@ -151,8 +151,10 @@ node scripts/verify-manifest.mjs
 | `assets/ruankao-essay-bank/references/essay-bank.md` | 范文精华卡（九项式） |
 | `assets/ruankao-essay-bank/references/exam-points.md` | 考点速记与评分标准 |
 | `assets/ruankao-essay-bank/references/courseware-3-4.md` | 课件整理与批改口径 |
+| `assets/ruankao-essay-bank/references/finished-essays.md` | 作者成稿索引（题目、字数、项目背景、子题目落点） |
+| `assets/ruankao-essay-writing/references/quick-cards.md` | 作者考前默写卡（段落骨架、必背术语、量化数据、扣分雷区） |
 
-克隆本仓库后，若需要完整题库，把这 4 份文件放回 `assets/ruankao-essay-bank/references/` 即可；缺失时技能会自动退化为只用公开版索引，并在回答中说明完整题库未就位。
+克隆本仓库后，若需要完整题库与速记卡，把这 6 份文件放回对应的 `references/` 目录即可；缺失时技能会自动退化为只用公开版索引与内置检查表，并在回答中说明哪些资料未就位。
 
 ## 八、从 GitHub 安装
 

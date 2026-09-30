@@ -32,7 +32,13 @@
 - CI 的 Windows 作业：GitHub 会把 `run:` 脚本写成无 BOM 的临时 .ps1，Windows PowerShell 5.1 按 ANSI 误读其中的中文而报语法错误；现驱动脚本只用 ASCII 报错信息，并显式用 `powershell.exe`（5.1）执行被测脚本，全部改用绝对路径。
 - CI 断言原先误把 HTML 属性里的直引号当成正文直引号，现只检查 `<body>` 内的文本。
 
+### 变更
+
+- 作者考前默写卡 `quick-cards.md` 与成稿索引 `finished-essays.md` 调整为**本地私有**：从仓库移除、写入 `.gitignore`，并改写 git 历史清除旧提交中的副本。
+- 写作技能改为**自带通用默写检查表**，不再依赖 `quick-cards.md`；题库技能在缺失私有文件时只使用公开版索引。
+- `scripts/verify-manifest.mjs` 的私有文件清单由 4 项扩充为 6 项。
+
 ### 说明
 
-- 本仓库为**公开安全版**：第三方课件与他人范文提炼出的 4 份题库文件（`type-index.md`、`essay-bank.md`、`exam-points.md`、`courseware-3-4.md`）留在本地，已写入 `.gitignore`，且不在 git 历史与对象库中。
-- 作者自有的项目素材与成稿（`finished-essays.md`、`quick-cards.md`、`writing-rules.md`）随仓库分发。
+- 本仓库为**公开安全版**：第三方课件、他人范文与他人成稿提炼出的 6 份文件留在本地，不在仓库与 git 历史中。
+- 作者自有的写作方法论 `writing-rules.md` 随仓库分发。

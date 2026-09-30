@@ -107,6 +107,8 @@ const privateFiles = [
   "assets/ruankao-essay-bank/references/essay-bank.md",
   "assets/ruankao-essay-bank/references/exam-points.md",
   "assets/ruankao-essay-bank/references/courseware-3-4.md",
+  "assets/ruankao-essay-bank/references/finished-essays.md",
+  "assets/ruankao-essay-writing/references/quick-cards.md",
 ];
 try {
   const tracked = execFileSync("git", ["ls-files"], { cwd: root, encoding: "utf8" }).split("\n");
