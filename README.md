@@ -98,6 +98,29 @@ dsh-ruankao-essay/
 - 库内的项目金额、周期、百分比多取自范文与素材池，**正式提交前请与自己的真实项目数据核对**。
 - 本插件只提供技能与脚本，不含 UI 面板；若想要侧边栏可视化题库，需要再加 Client 插件（可用 `templates/decoration` 起步）。
 
-## 七、许可
+## 七、公开版与本地私有内容
 
-MIT。库内课件与范文的版权归原作者（文老师课程资料）所有，仅供个人备考使用，请勿外传或商用。
+本仓库是**公开安全版**：只包含插件代码、两个技能的骨架、写作规格、公开的历年真题题名、通用理论骨架，以及作者自有的项目素材。
+
+以下 4 份文件由第三方课件与他人范文提炼而来，**留在本地、不随仓库分发**（已写入 `.gitignore`，且不在 git 历史中）：
+
+| 本地文件 | 内容 |
+|---|---|
+| `assets/ruankao-essay-bank/references/type-index.md` | 按题型详表与项目素材池 |
+| `assets/ruankao-essay-bank/references/essay-bank.md` | 范文精华卡（九项式） |
+| `assets/ruankao-essay-bank/references/exam-points.md` | 考点速记与评分标准 |
+| `assets/ruankao-essay-bank/references/courseware-3-4.md` | 课件整理与批改口径 |
+
+克隆本仓库后，若需要完整题库，把这 4 份文件放回 `assets/ruankao-essay-bank/references/` 即可；缺失时技能会自动退化为只用公开版索引，并在回答中说明完整题库未就位。
+
+## 八、从 GitHub 安装
+
+```powershell
+git clone https://github.com/Zm886/dsh-ruankao-essay.git
+# 然后按「二、安装」的方式 A 或方式 B 安装
+```
+
+## 九、许可
+
+MIT（见 `LICENSE`）。仓库内不含第三方课件与范文内容；若你在本地补入这类资料，请自行确认其使用范围，仅供个人备考，勿再分发或商用。
+
