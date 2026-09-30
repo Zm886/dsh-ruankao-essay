@@ -27,6 +27,12 @@ const SKILLS = [
       "软考系统分析师论文写作与改写总纲。Write or rewrite a Chinese Soft Exam (软考) 系统分析师 essay from a 论文题目 (with its 三个子题目) or from the user's draft: forces a strict 10-paragraph structure, exact word-count band, no titles/no sub-headings/no first person, explicit sub-question coverage, at least one real project instance per argument, and delivery as a Word .doc plus .md. Use whenever the task is 软考系分论文, 论文改写, 论文押题, or 考场论文成稿.",
   },
   {
+    dir: "ruankao-essay-review",
+    name: "ruankao-essay-review",
+    description:
+      "软考系统分析师论文自评与批改。Review a finished Chinese Soft Exam (软考) 系统分析师 essay against the public scoring norms and return a per-paragraph verdict: sub-question coverage, 10-paragraph structure, word-count band, forbidden patterns (titles, first person, enumerated starters), theory accuracy, project-instance grounding, quantified results, and a closing weakness-and-improvement pair; then propose concrete rewrites. Use when the user submits a draft or finished essay and asks to 自评, 批改, 打分, 查漏, or 提分, or asks whether an essay is ready to submit.",
+  },
+  {
     dir: "ruankao-essay-bank",
     name: "ruankao-essay-bank",
     description:

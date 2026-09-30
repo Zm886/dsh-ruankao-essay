@@ -1,8 +1,9 @@
 /**
- * Client half: 在 DSH Web UI 的对话区注册一个「软考题库速查」面板。
+ * Client half: 在 DSH Web UI 的对话区注册「软考题库速查」面板。
  *
- * 数据只包含公开内容：历年考试题名、通用理论骨架、写作规格速查。
- * 面板注册在 conversation.composer.dock（已分配空间的槽位），不接管页面根节点。
+ * - 文案通过 Client locale 服务的命名空间字典提供（zh / en 各一份，键集一致）；
+ * - 数据只包含公开内容：历年考试题名、通用理论骨架、写作规格速查；
+ * - 注册在 conversation.composer.dock（已分配空间的槽位），不接管页面根节点。
  */
 
 window.__ModuleLoader__.load({
@@ -10,6 +11,8 @@ window.__ModuleLoader__.load({
   factory(require) {
     const React = require('react');
     const h = React.createElement;
+
+    const NS = 'ruankao-essay.panel';
 
     // ---- 公开数据：历年题名 ----
     const EXAMS = [
@@ -56,31 +59,78 @@ window.__ModuleLoader__.load({
       '每个论点配一条项目真实业务实例；效果给量化数据；收尾 2~3 条不足与改进',
     ];
 
+    // ---- 文案字典：zh / en 键集必须一致 ----
+    const DICT = {
+      zh: {
+        'panel.open': '题库速查',
+        'panel.close': '收起题库',
+        'panel.summary': '{years} 年真题 · {topics} 类题型',
+        'panel.hint': '真题题名 / 题型骨架 / 写作规格',
+        'tab.exam': '历年真题',
+        'tab.theory': '题型骨架',
+        'tab.rules': '写作规格',
+        'filter.label': '按年份',
+        'filter.all': '全部年份',
+        'filter.empty': '该年份暂无记录',
+      },
+      en: {
+        'panel.open': 'Topic bank',
+        'panel.close': 'Hide topic bank',
+        'panel.summary': '{years} exam sittings · {topics} topic groups',
+        'panel.hint': 'titles / theory skeletons / writing spec',
+        'tab.exam': 'Exam titles',
+        'tab.theory': 'Theory skeletons',
+        'tab.rules': 'Writing spec',
+        'filter.label': 'Year',
+        'filter.all': 'All years',
+        'filter.empty': 'No record for this year',
+      },
+    };
+
     const surface = 'rgba(127,127,127,0.10)';
     const border = '1px solid rgba(127,127,127,0.28)';
 
-    function TopicBank() {
+    function TopicBank(props) {
+      const t = props.t;
       const [open, setOpen] = React.useState(false);
       const [tab, setTab] = React.useState('exam');
+      const [year, setYear] = React.useState('all');
+
       const box = { maxHeight: '42vh', overflow: 'auto', padding: '8px 10px', border: border, borderRadius: 8, marginTop: 6, background: surface, fontSize: 13, lineHeight: 1.55 };
       const chip = { padding: '2px 8px', border: border, borderRadius: 999, background: 'transparent', color: 'inherit', cursor: 'pointer', fontSize: 12, marginRight: 6 };
       const chipOn = { ...chip, background: 'rgba(127,127,127,0.22)', fontWeight: 600 };
+      const select = { ...chip, marginRight: 0, padding: '2px 6px' };
+
+      const exams = year === 'all' ? EXAMS : EXAMS.filter((item) => item.year === year);
 
       const body = tab === 'exam'
         ? h('div', null,
-            EXAMS.map((e) => h('div', { key: e.year, style: { marginBottom: 6 } },
-              h('span', { style: { fontWeight: 600, marginRight: 6 } }, e.year),
-              h('span', null, e.titles.join('；'))
-            ))
+            h('div', { style: { marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 } },
+              h('span', { style: { opacity: 0.75 } }, t('filter.label')),
+              h('select', {
+                value: year,
+                onChange: (event) => setYear(event.target.value),
+                style: select,
+              },
+                h('option', { value: 'all' }, t('filter.all')),
+                EXAMS.map((item) => h('option', { key: item.year, value: item.year }, item.year))
+              )
+            ),
+            exams.length === 0
+              ? h('div', { style: { opacity: 0.7 } }, t('filter.empty'))
+              : exams.map((item) => h('div', { key: item.year, style: { marginBottom: 6 } },
+                  h('span', { style: { fontWeight: 600, marginRight: 6 } }, item.year),
+                  h('span', null, item.titles.join('；'))
+                ))
           )
         : tab === 'theory'
           ? h('div', null,
-              SKELETONS.map((s) => h('div', { key: s.name, style: { marginBottom: 8 } },
-                h('div', { style: { fontWeight: 600 } }, s.name),
-                h('ul', { style: { margin: '2px 0 0 18px', padding: 0 } }, s.points.map((p, i) => h('li', { key: i }, p)))
+              SKELETONS.map((skeleton) => h('div', { key: skeleton.name, style: { marginBottom: 8 } },
+                h('div', { style: { fontWeight: 600 } }, skeleton.name),
+                h('ul', { style: { margin: '2px 0 0 18px', padding: 0 } }, skeleton.points.map((point, index) => h('li', { key: index }, point)))
               ))
             )
-          : h('ul', { style: { margin: 0, paddingLeft: 18 } }, RULES.map((r, i) => h('li', { key: i, style: { marginBottom: 4 } }, r)));
+          : h('ul', { style: { margin: 0, paddingLeft: 18 } }, RULES.map((rule, index) => h('li', { key: index, style: { marginBottom: 4 } }, rule)));
 
       return h('div', { style: { fontSize: 13, color: 'inherit' } },
         h('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } },
@@ -88,15 +138,15 @@ window.__ModuleLoader__.load({
             type: 'button',
             onClick: () => setOpen(!open),
             style: { ...chip, marginRight: 0 },
-            title: '软考系分论文题库速查',
-          }, (open ? '收起题库' : '题库速查') + ' · ' + EXAMS.length + ' 年'),
-          h('span', { style: { opacity: 0.7, fontSize: 12 } }, '真题题名 / 题型骨架 / 写作规格')
+            title: t('panel.open'),
+          }, (open ? t('panel.close') : t('panel.open')) + ' · ' + t('panel.summary', { years: EXAMS.length, topics: SKELETONS.length })),
+          h('span', { style: { opacity: 0.7, fontSize: 12 } }, t('panel.hint'))
         ),
         open && h('div', { style: box },
           h('div', { style: { marginBottom: 6 } },
-            h('button', { type: 'button', style: tab === 'exam' ? chipOn : chip, onClick: () => setTab('exam') }, '历年真题'),
-            h('button', { type: 'button', style: tab === 'theory' ? chipOn : chip, onClick: () => setTab('theory') }, '题型骨架'),
-            h('button', { type: 'button', style: tab === 'rules' ? chipOn : chip, onClick: () => setTab('rules') }, '写作规格')
+            h('button', { type: 'button', style: tab === 'exam' ? chipOn : chip, onClick: () => setTab('exam') }, t('tab.exam')),
+            h('button', { type: 'button', style: tab === 'theory' ? chipOn : chip, onClick: () => setTab('theory') }, t('tab.theory')),
+            h('button', { type: 'button', style: tab === 'rules' ? chipOn : chip, onClick: () => setTab('rules') }, t('tab.rules'))
           ),
           body
         )
@@ -104,13 +154,15 @@ window.__ModuleLoader__.load({
     }
 
     return {
-      inject: ['slots'],
+      inject: ['slots', 'locale'],
       apply(ctx) {
+        ctx.effect(() => ctx.locale.register(NS, DICT), 'ruankao-essay: locale dictionary');
+        const t = ctx.locale.bind(NS);
         ctx.slots.inject('conversation.composer.dock', () => ctx.slots.register({
           name: 'conversation.composer.dock',
           id: 'ruankao-topic-bank',
           order: 6,
-        }, TopicBank));
+        }, (props) => h(TopicBank, { ...props, t })));
       },
     };
   },

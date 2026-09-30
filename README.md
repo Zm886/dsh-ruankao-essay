@@ -9,19 +9,20 @@
 
 - **插件名（包名）**：`dsh-ruankao-essay`
 - **Host 插件行 id**：`ruankao-essay`
-- **提供的技能**：`ruankao-essay-writing`（写作／改写总纲）、`ruankao-essay-bank`（题库与写作规范）
+- **提供的技能**：`ruankao-essay-writing`（写作／改写总纲）、`ruankao-essay-bank`（题库与写作规范）、`ruankao-essay-review`（逐段自评与改写建议）
 - **Client 半**：`client.js`，在 `conversation.composer.dock` 注册「题库速查」面板
 - **形态**：Host 半纯 JS 无依赖、无构建步骤；Client 半是单文件浏览器模块
 - **版本**：0.1.0，变更见 [CHANGELOG.md](CHANGELOG.md)　·　安全策略见 [SECURITY.md](SECURITY.md)　·　贡献指南见 [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## 一、它解决什么问题
 
-写软考系分论文的痛点不是「不会写」，而是每次都要重新回忆：这篇题目的子题目有哪几块、该配哪个项目、理论点怎么写全、字数与结构怎么卡、成稿怎么变成 Word。本插件把这些固化成两个技能：
+写软考系分论文的痛点不是「不会写」，而是每次都要重新回忆：这篇题目的子题目有哪几块、该配哪个项目、理论点怎么写全、字数与结构怎么卡、成稿怎么变成 Word、交稿前怎么自查。本插件把这些固化成三个技能：
 
 | 技能 | 干什么 | 何时加载 |
 |---|---|---|
 | `ruankao-essay-bank` | 查：真题表（2016—2026）、按题型的理论骨架、写作规格与扣分雷区 | 拿到题目先查它 |
 | `ruankao-essay-writing` | 写：10 段式结构、字数口径、语气禁忌、子题目回应规则、Word 交付脚本 | 动笔与交付时 |
+| `ruankao-essay-review` | 评：机械项检查（段数／字数／禁写项）＋逐段体检＋逐条改写建议 | 交稿前自评 |
 
 两者配合的完整链路：**查题 → 定骨架 → 配实例 → 成稿 → 自检 → 生成 .doc**。
 
@@ -87,6 +88,8 @@ dsh-ruankao-essay/
    │  ├─ SKILL.md
    │  ├─ references/writing-rules.md
    │  └─ scripts/make-essay-doc.ps1   # Markdown → Word 可打开的 .doc（含段数与字数自检）
+   ├─ ruankao-essay-review/           # 技能三：评
+   │  └─ SKILL.md                     # 逐段体检表＋五类扣分＋输出格式
    └─ ruankao-essay-bank/             # 技能二：查
       ├─ SKILL.md
       └─ references/topic-index-lite.md

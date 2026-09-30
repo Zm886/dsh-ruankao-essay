@@ -174,6 +174,12 @@ try {
   } else {
     ok(`发布白名单只含已跟踪文件（${published.length} 个，另有 package.json 等固定项）`);
   }
+  // 完整性：每个技能的 SKILL.md 都必须在发布白名单里，否则打包/安装会漏技能
+  const missingSkills = skillNames
+    .map((name) => `assets/${name}/SKILL.md`)
+    .filter((file) => !published.includes(file));
+  if (missingSkills.length > 0) fail(`发布白名单缺少技能文件：${missingSkills.join(", ")}`);
+  else ok(`发布白名单包含全部 ${skillNames.length} 个技能的 SKILL.md`);
 } catch {
   ok("未检测到 git 环境，跳过发布白名单检查");
 }

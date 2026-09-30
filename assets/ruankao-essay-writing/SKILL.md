@@ -52,6 +52,7 @@ description: 软考系统分析师论文写作与改写总纲。Write or rewrite
 | 完整的写作口径与踩坑记录（结构、语气、子题目、doc 生成） | `references/writing-rules.md` |
 | 本地参考资料 | `references/` 下除 `writing-rules.md` 以外的文件；**先列目录确认存在再读**，不存在就用本文件末尾的检查表 |
 | 题库、题型索引、理论骨架、项目背景写法 | 用 `ruankao-essay-bank` 技能 |
+| 成稿后的逐段体检与改写建议 | 用 `ruankao-essay-review` 技能 |
 
 ## 通用默写检查表（每篇写完自检）
 

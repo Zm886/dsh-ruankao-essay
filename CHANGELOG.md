@@ -12,11 +12,16 @@
 - **仓库文档**：新增 `SECURITY.md`（安全策略与私密漏洞报告方式）与 `CONTRIBUTING.md`（开发流程、内容边界、PR 检查表、发布步骤）。
 - `verify-manifest.mjs` 增加 Client 半校验（模块 id 必须等于包名、必须声明槽位与 `dsh.client.inject`、必须在 `files` 白名单内），共 8 项。
 
+### 新增
+
+- 技能 `ruankao-essay-review`：交稿前的逐段自评——先用脚本量段数与字数，再按 10 段逐段体检（子题目覆盖、实例落地、量化效果），输出「必须改／建议改」清单与逐条改写建议。
+- Client 面板接入 Client locale 服务：文案走命名空间字典（zh／en 键集一致），语言切换即时生效；`dsh.client.inject` 补齐 `@deepseek-ai/dsh-client-ui-slots` 与 `@deepseek-ai/dsh-client-locale`。
+- Client 面板新增「按年份筛选真题」。
+
 ### 计划中
 
-- 技能三 `ruankao-essay-review`：按阅卷评分口径对成稿逐段自评并给出修改建议。
-- Client 面板的文案接入 Client locale 服务，便于多语言。
 - 本地参考资料缺失时的补齐指引与降级说明。
+- 面板支持按题型关键词搜索。
 
 ## [0.1.0] - 2026-09-30
 

@@ -23,7 +23,9 @@
       "platform": "web",
       "immediately": true,
       "inject": [
-        "@deepseek-ai/dsh-client-ui-conversation"
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-locale"
       ]
     }
   },
@@ -41,6 +43,7 @@
     "assets/ruankao-essay-writing/SKILL.md",
     "assets/ruankao-essay-writing/references/writing-rules.md",
     "assets/ruankao-essay-writing/scripts/make-essay-doc.ps1",
+    "assets/ruankao-essay-review/SKILL.md",
     "locale",
     "icon.svg",
     "README.md",
