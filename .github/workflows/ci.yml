@@ -31,13 +31,15 @@ jobs:
       - name: 校验清单与技能一致性
         run: node scripts/verify-manifest.mjs
 
-      - name: 确认私有题库文件未被跟踪
+      - name: 确认 references 下只有公开文件被跟踪
         run: |
-          if git ls-files | grep -E '(courseware-3-4|exam-points|references/essay-bank|references/type-index)\.md$'; then
-            echo "::error::third-party derived knowledge files must not be tracked"
+          unexpected=$(git ls-files | grep '/references/' | grep -vE 'references/(topic-index-lite|writing-rules)\.md$' || true)
+          if [ -n "$unexpected" ]; then
+            echo "::error::unexpected tracked reference files:"
+            echo "$unexpected"
             exit 1
           fi
-          echo "no private knowledge files tracked"
+          echo "only public reference files are tracked"
 
   word-script:
     name: 生成脚本端到端测试（Windows PowerShell 5.1）

@@ -1,4 +1,4 @@
-﻿# 依赖与构建产物
+# 依赖与构建产物
 node_modules/
 dist/
 lib/
@@ -15,13 +15,5 @@ out/
 *.doc
 *_v2.doc
 
-# === 本地私有：第三方课件与他人范文的提炼内容，不随公开仓库分发 ===
-assets/ruankao-essay-bank/references/type-index.md
-assets/ruankao-essay-bank/references/essay-bank.md
-assets/ruankao-essay-bank/references/exam-points.md
-assets/ruankao-essay-bank/references/courseware-3-4.md
-
 # CI 与本地测试产物
 tests/out/
-assets/ruankao-essay-bank/references/finished-essays.md
-assets/ruankao-essay-writing/references/quick-cards.md

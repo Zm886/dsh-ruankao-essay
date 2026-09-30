@@ -101,20 +101,24 @@ for (const required of [
 }
 ok(`必备文件齐全（${statSync(join(root, "README.md")).size} 字节 README 等）`);
 
-// 6) 私有题库文件不得进入版本控制
-const privateFiles = [
-  "assets/ruankao-essay-bank/references/type-index.md",
-  "assets/ruankao-essay-bank/references/essay-bank.md",
-  "assets/ruankao-essay-bank/references/exam-points.md",
-  "assets/ruankao-essay-bank/references/courseware-3-4.md",
-  "assets/ruankao-essay-bank/references/finished-essays.md",
-  "assets/ruankao-essay-writing/references/quick-cards.md",
-];
+// 6) references/ 下只允许公开文件进入版本控制（本地资料用 .git/info/exclude 忽略）
+const PUBLIC_REFERENCES = new Set([
+  "assets/ruankao-essay-bank/references/topic-index-lite.md",
+  "assets/ruankao-essay-writing/references/writing-rules.md",
+]);
 try {
-  const tracked = execFileSync("git", ["ls-files"], { cwd: root, encoding: "utf8" }).split("\n");
-  const leaked = privateFiles.filter((file) => tracked.includes(file));
-  if (leaked.length > 0) fail(`私有题库文件被纳入了版本控制：${leaked.join(", ")}`);
-  else ok("私有题库文件均未被跟踪（本地存在但不进仓库）");
+  const tracked = execFileSync("git", ["ls-files"], { cwd: root, encoding: "utf8" })
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const unexpected = tracked.filter(
+    (file) => file.includes("/references/") && !PUBLIC_REFERENCES.has(file),
+  );
+  if (unexpected.length > 0) {
+    fail(`references/ 下出现了不应入库的文件：${unexpected.join(", ")}`);
+  } else {
+    ok("references/ 下只有公开文件被跟踪（本地资料未入库）");
+  }
 } catch {
   ok("未检测到 git 环境，跳过版本控制检查");
 }
