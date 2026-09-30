@@ -57,28 +57,29 @@ dsh-ruankao-essay/
 ├─ index.js              # Cordis 插件：ctx.skills.registerProvider(...) 注册两个技能
 ├─ icon.svg              # 插件卡片图标
 ├─ locale/{zh,en}.json   # 插件卡片标题与描述
-├─ scripts/
-│  └─ make-essay-doc.ps1 # Markdown → Word 可打开的 .doc（含中文字数自检）
 └─ assets/
-   ├─ ruankao-essay-writing/
+   ├─ ruankao-essay-writing/          # 技能一：写
    │  ├─ SKILL.md
-   │  └─ references/{writing-rules.md, quick-cards.md}
-   └─ ruankao-essay-bank/
+   │  ├─ references/{writing-rules.md, quick-cards.md}
+   │  └─ scripts/make-essay-doc.ps1   # Markdown → Word 可打开的 .doc（含段数与字数自检）
+   └─ ruankao-essay-bank/             # 技能二：查
       ├─ SKILL.md
-      └─ references/{type-index.md, essay-bank.md, finished-essays.md, exam-points.md, courseware-3-4.md}
+      └─ references/{topic-index-lite.md, finished-essays.md, 以及本地私有的 4 份题库文件}
 ```
+
+脚本放在写作技能目录内，因此无论是「插件资源基」还是「技能目录」安装，`<skill-directory>/scripts/make-essay-doc.ps1` 都能正确定位。
 
 ## 四、用起来是什么样
 
 会话里出现「写软考系分论文 / 这个论文题目怎么写 / 押题」之类需求时，Agent 会加载技能，然后：
 
-1. 在 `type-index.md` 里定位题目（真题年份、题型、理论骨架、扣分雷区、可选项目）；
+1. 在 `references/topic-index-lite.md` 里定位题目（真题题名、通用理论骨架、写作规格、可选项目），若本地放了完整题库则改用 `type-index.md`（含扣分雷区与范文素材）；
 2. 按 10 段式规格成稿：**严格 10 段、含标点 2500~2800、无标题、无分点标号、无第一人称、周期只写首段**；
 3. 每个论点配一条项目业务实例，效果给量化数据，收尾写 2~3 条不足与改进；
 4. 用脚本产出 Word（用调用运算符，不要套 `pwsh -File`——本机 shell 里没有 `pwsh` 命令）：
 
 ```powershell
-& "D:\project\deeepseek\dsh-plugins\dsh-ruankao-essay\scripts\make-essay-doc.ps1" -MdPath "D:\out\论微服务架构及其应用.md"
+& "<skill-directory>\scripts\make-essay-doc.ps1" -MdPath "D:\out\论微服务架构及其应用.md"
 # 段落数: 10  含标点字数: 2534  纯汉字: 2116
 # 已生成: D:\out\论微服务架构及其应用.doc
 ```
