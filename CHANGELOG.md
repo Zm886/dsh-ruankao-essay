@@ -18,6 +18,11 @@
 - Client 面板接入 Client locale 服务：文案走命名空间字典（zh／en 键集一致），语言切换即时生效；`dsh.client.inject` 补齐 `@deepseek-ai/dsh-client-ui-slots` 与 `@deepseek-ai/dsh-client-locale`。
 - Client 面板新增「按年份筛选真题」。
 
+### 验证
+
+- 已在 DSH **V0.2.0-rc.2** 上完成安装验证：桌面端 Web 侧边栏 Plugins → Add plugin → 粘贴本目录绝对路径；
+  三个技能均可加载，输入区上方的「题库速查」面板正常显示。
+- 结论：desktop profile 只能由应用安装（手工写 profile 会被应用重新生成时剔除），README 已按此更新安装说明。
 ### 计划中
 
 - 本地参考资料缺失时的补齐指引与降级说明。

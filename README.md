@@ -30,20 +30,29 @@
 
 ## 二、安装
 
-### 方式 A：作为 bundle 安装（推荐，装一次全局可用）
+### 方式 A：在 DSH 桌面端安装（推荐，实测可行）
 
-在安装了本插件的 DSH 里让 Agent 调用 `plugin_manager`：
+在 Web 侧边栏打开 **Plugins（插件）** → **Add plugin（添加插件）**，在输入框粘贴**本目录的绝对路径**：
+
+```
+D:\project\deeepseek\dsh-plugins\dsh-ruankao-essay
+```
+
+对话框接受「包名[+版本] / Git 地址 / tarball / **绝对本地路径**」；用本地路径不需要联网。安装会写入 profile 的 `dependencies` 与 `dsh.profile.bundles`（以 `link:` 符号链接方式），因此**之后修改本目录的代码即时生效**；但改动了 `index.js` / `client.js` 的行为后需要重启 DSH 才会加载新的模块代。
+
+> 已在 DSH **V0.2.0-rc.2** 上验证：三个技能可加载、输入区上方的题库速查面板正常显示。
+> 请勿手工编辑 profile 的 `package.json` / `cordis.patch.yml`：desktop profile 由 Electron 应用独占管理，手写的条目会在应用重新生成 profile 时被剔除（`dsh` CLI 也会拒绝操作该 profile）。
+
+### 方式 A′：让 Agent 调用 `plugin_manager`
 
 ```jsonc
 // action: install_bundle, target: 本目录绝对路径
 { "action": "install_bundle", "target": "D:\\project\\deeepseek\\dsh-plugins\\dsh-ruankao-essay" }
 ```
 
-也可以在 DSH 桌面端的 **插件管理 / Plugin Manager** 里选择「安装本地 bundle」，指向本目录。安装后插件会出现在插件清单与设置页，行 id 为 `ruankao-essay`；改动用 HMR 生效，替换已装包需重启 DSH。
-
 > 注意：Agent 每次调用 `plugin_manager` 都需要授权；本插件目录请保留在磁盘上（不要打进 `app.asar`），技能里的 references 需要模型直接读文件。
 
-### 方式 B：免安装（只想要技能，不想改 profile）
+### 方式 B：免安装（拷技能目录）
 
 技能目录就是标准布局，直接拷到技能根目录即可被自动发现：
 
