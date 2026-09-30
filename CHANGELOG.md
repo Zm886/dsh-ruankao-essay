@@ -7,6 +7,9 @@
 
 ### 新增
 
+- **成稿门禁 `assets/ruankao-essay-writing/scripts/check-essay.ps1`**：一条命令核对段数（必须 10）、含标点字数（2500~2800）、第一人称、禁写字眼与分点标号、Markdown 粗体、标题、直引号；未输出 PASS 不得交付。已写入写作技能第 7 步，成为规范的一部分。
+- **成稿入库 `assets/ruankao-essay-writing/scripts/ingest-essay.ps1`**：先跑门禁（未 PASS 拒绝入库），再统计段数／含标点／纯汉字，更新本地题库一览表（同题名更新、新题追加）、按模板追加逐题记录小节，并可同步成稿索引；支持重复执行（幂等）。
+- **仓库巡检 `scripts/health-check.ps1`**：一次跑完①清单校验 12 项②6 份本地资料是否泄漏进版本库③题库与成稿数量一致性④最近一次 CI 结论，输出简报并以退出码表示是否需要处理。
 - **Client 面板**：`client.js` 在 `conversation.composer.dock` 注册「题库速查」面板，含「历年真题／题型骨架／写作规格」三个页签；数据与仓库内公开版索引一致。
 - **明确不发布 npm**：`package.json` 保持 `private: true`（防止误发布），并移除了 npm 发布流程；新增 `.github/workflows/github-release.yml`，打 tag 时只创建 GitHub Release。原因是 npm 打包只看 `files` 白名单、不看 `.gitignore`，写目录会把本机资料一起发出去。
 - **仓库文档**：新增 `SECURITY.md`（安全策略与私密漏洞报告方式）与 `CONTRIBUTING.md`（开发流程、内容边界、PR 检查表、发布步骤）。
