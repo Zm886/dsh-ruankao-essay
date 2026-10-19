@@ -39,6 +39,18 @@ foreach ($f in $private) {
 }
 if ($leaked.Count -gt 0) { $problems += ('本地资料被跟踪：' + ($leaked -join '; ')) } else { $notes += ('6 份本地资料均未被跟踪') }
 
+# references 下新增的本地文件必须已被忽略，否则一次 git add -A 就会泄漏
+$unguarded = @()
+$refFiles = Get-ChildItem (Join-Path $root 'assets') -Recurse -Filter '*.md' -ErrorAction SilentlyContinue | Where-Object { $_.FullName -like '*\references\*' }
+foreach ($rf in $refFiles) {
+  $rel = $rf.FullName.Substring($root.Length + 1).Replace('\', '/')
+  if ($tracked -notcontains $rel) {
+    git check-ignore -q -- $rel
+    if ($LASTEXITCODE -ne 0) { $unguarded += $rel }
+  }
+}
+if ($unguarded.Count -gt 0) { $problems += ('本地资料未加忽略规则（有泄漏风险）：' + ($unguarded -join '、')) } else { $notes += 'references 下无未忽略的本地文件' }
+
 $dirty = git status --porcelain
 if ($dirty) { $notes += ('工作区有未提交改动 ' + (@($dirty).Count) + ' 项（发布前请提交）') } else { $notes += '工作区干净' }
 
@@ -55,15 +67,24 @@ if (-not (Test-Path $bank)) {
   $rows = @(Select-String -Path $bank -Pattern '^\| \d+ \| 论' -Encoding UTF8).Count
   $essays = @()
   if (Test-Path $EssaysDir) {
-    $essays = Get-ChildItem $EssaysDir -Filter '论*.md' | Where-Object { $_.BaseName -notmatch '速记卡|索引|改进点|课件' }
+    $essays = Get-ChildItem $EssaysDir -Filter '论*.md' -Recurse | Where-Object { $_.BaseName -notmatch '速记卡|索引|改进点|课件' } | Sort-Object FullName -Unique
   }
   Write-Output ('  题库一览行：' + $rows + '    成稿文件：' + $essays.Count)
   if ($rows -ne $essays.Count) {
     $names = ($essays | ForEach-Object { $_.BaseName })
     $missing = @()
     foreach ($n in $names) { if (-not (Select-String -Path $bank -Pattern ([regex]::Escape($n)) -Quiet -Encoding UTF8)) { $missing += $n } }
+    $bankRows = Select-String -Path $bank -Pattern '^\| \d+ \| 论' -Encoding UTF8 | ForEach-Object {
+      $cells = ($_.Line -split '\|')
+      [pscustomobject]@{ Title = $cells[2].Trim(); File = $cells[6].Trim() }
+    }
+    $dupSameFile = @($bankRows | Group-Object Title | Where-Object { $_.Count -gt 1 -and @($_.Group | Select-Object -ExpandProperty File -Unique).Count -eq 1 })
+    $dupDiffFile = @($bankRows | Group-Object Title | Where-Object { $_.Count -gt 1 -and @($_.Group | Select-Object -ExpandProperty File -Unique).Count -gt 1 })
+    $dup = $dupSameFile
     if ($missing.Count -gt 0) { $problems += ('成稿未入库：' + ($missing -join '、')) }
-    else { $notes += '数量不一致但题名都在（可能有重复行）' }
+    if ($dup.Count -gt 0) { $problems += ('题库出现重复行（同题同文件）：' + (($dup | ForEach-Object { $_.Name + '×' + $_.Count }) -join '、')) }
+    if ($dupDiffFile.Count -gt 0) { $notes += ('同标题不同成稿（建议在表中区分）：' + (($dupDiffFile | ForEach-Object { $_.Name }) -join '、')) }
+    if ($missing.Count -eq 0 -and $dup.Count -eq 0) { $problems += ('题库行数与成稿篇数不一致（行 ' + $rows + ' vs 篇 ' + $essays.Count + '）') }
   } else {
     $notes += '题库与成稿数量一致'
   }
