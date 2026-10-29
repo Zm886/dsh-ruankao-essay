@@ -17,3 +17,7 @@ out/
 
 # CI 与本地测试产物
 tests/out/
+
+# 本地私有：上游提交指针与无 git 推送工具（不入库）
+.upstream-ref.txt
+scripts/push-to-github.mjs

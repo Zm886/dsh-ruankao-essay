@@ -89,6 +89,59 @@ if (!existsSync(join(root, scriptPath))) {
   }
 }
 
+// 4b) 所有 PowerShell 脚本都必须带 BOM（Windows PowerShell 5.1 无 BOM 会按 ANSI 误读中文）
+const ps1Files = [
+  "assets/ruankao-essay-writing/scripts/check-essay.ps1",
+  "assets/ruankao-essay-writing/scripts/make-essay-doc.ps1",
+  "assets/ruankao-essay-writing/scripts/ingest-essay.ps1",
+  "scripts/health-check.ps1",
+];
+let ps1Ok = true;
+for (const relative of ps1Files) {
+  const absolute = join(root, relative);
+  if (!existsSync(absolute)) {
+    fail(`PowerShell 脚本缺失：${relative}`);
+    ps1Ok = false;
+    continue;
+  }
+  const bytes = readFileSync(absolute);
+  if (!(bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf)) {
+    fail(`${relative} 缺少 UTF-8 BOM（Windows PowerShell 5.1 会按 ANSI 误读中文）`);
+    ps1Ok = false;
+  }
+}
+if (ps1Ok) ok(`script: ${ps1Files.length} 个 PowerShell 脚本均带 UTF-8 BOM`);
+
+// 4a) Node 版门禁与生成脚本（跨平台主路径）
+const nodeScripts = [
+  "assets/ruankao-essay-writing/scripts/check-essay.mjs",
+  "assets/ruankao-essay-writing/scripts/make-essay-doc.mjs",
+];
+let nodeScriptsOk = true;
+for (const relative of nodeScripts) {
+  if (!existsSync(join(root, relative))) {
+    fail(`Node 版脚本缺失：${relative}`);
+    nodeScriptsOk = false;
+    continue;
+  }
+  const source = read(relative);
+  if (!source.includes("--require-terms") && relative.includes("check-essay")) {
+    fail(`${relative} 缺少 --require-terms 参数（子题目 2 术语覆盖依赖它）`);
+    nodeScriptsOk = false;
+  }
+  if (!source.includes("--md")) {
+    fail(`${relative} 缺少 --md 参数`);
+    nodeScriptsOk = false;
+  }
+  if ((pkg.files ?? []).includes(relative) === false) {
+    fail(`package.json 的 files 未包含 ${relative}，打包会漏掉`);
+    nodeScriptsOk = false;
+  }
+}
+if (nodeScriptsOk) {
+  ok(`script: Node 版门禁与生成脚本齐全（${nodeScripts.length} 个），且已进 files 白名单`);
+}
+
 // 4b) Client 半（可选）：清单声明与产物必须一致
 const clientManifest = pkg.dsh?.client;
 if (clientManifest !== undefined) {
@@ -115,6 +168,7 @@ if (clientManifest !== undefined) {
 // 5) 技能引用的公开索引必须存在
 for (const required of [
   "assets/ruankao-essay-bank/references/topic-index-lite.md",
+  "assets/ruankao-essay-bank/references/topic-index.json",
   "assets/ruankao-essay-writing/references/writing-rules.md",
   "LICENSE",
   "README.md",
@@ -123,6 +177,29 @@ for (const required of [
   if (!existsSync(join(root, required))) fail(`缺少必备文件：${required}`);
 }
 ok(`必备文件齐全（${statSync(join(root, "README.md")).size} 字节 README 等）`);
+
+// 5a) 单一来源守卫：题库数据与技能描述必须与各自数据源一致
+const generators = [
+  { script: "scripts/build-client-data.mjs", label: "题库数据" },
+  { script: "scripts/build-skill-descriptions.mjs", label: "技能描述" },
+];
+for (const generator of generators) {
+  const scriptPath = join(root, generator.script);
+  if (!existsSync(scriptPath)) {
+    fail(`缺少生成脚本：${generator.script}`);
+    continue;
+  }
+  if ((pkg.files ?? []).includes(generator.script) === false) {
+    fail(`package.json 的 files 未包含 ${generator.script}，打包会漏掉`);
+  }
+  try {
+    execFileSync(process.execPath, [scriptPath, "--check"], { cwd: root, stdio: "pipe" });
+    ok(`${generator.label}：与数据源一致（${generator.script} --check）`);
+  } catch (error) {
+    const detail = (error.stderr ?? Buffer.alloc(0)).toString("utf8").trim().split("\n").slice(0, 2).join(" ");
+    fail(`${generator.label}：与数据源不一致，请运行 node ${generator.script}（${detail}）`);
+  }
+}
 
 // 6) references/ 下只允许公开文件进入版本控制（本地资料用 .git/info/exclude 忽略）
 const PUBLIC_REFERENCES = new Set([

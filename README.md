@@ -35,7 +35,7 @@
 在 Web 侧边栏打开 **Plugins（插件）** → **Add plugin（添加插件）**，在输入框粘贴**本目录的绝对路径**：
 
 ```
-D:\project\deeepseek\dsh-plugins\dsh-ruankao-essay
+/path/to/dsh-plugins/dsh-ruankao-essay
 ```
 
 对话框接受「包名[+版本] / Git 地址 / tarball / **绝对本地路径**」；用本地路径不需要联网。安装会写入 profile 的 `dependencies` 与 `dsh.profile.bundles`（以 `link:` 符号链接方式），因此**之后修改本目录的代码即时生效**；但改动了 `index.js` / `client.js` 的行为后需要重启 DSH 才会加载新的模块代。
@@ -47,7 +47,7 @@ D:\project\deeepseek\dsh-plugins\dsh-ruankao-essay
 
 ```jsonc
 // action: install_bundle, target: 本目录绝对路径
-{ "action": "install_bundle", "target": "D:\\project\\deeepseek\\dsh-plugins\\dsh-ruankao-essay" }
+{ "action": "install_bundle", "target": "/path/to/dsh-plugins/dsh-ruankao-essay" }
 ```
 
 > 注意：Agent 每次调用 `plugin_manager` 都需要授权；本插件目录请保留在磁盘上（不要打进 `app.asar`），技能里的 references 需要模型直接读文件。
@@ -58,11 +58,16 @@ D:\project\deeepseek\dsh-plugins\dsh-ruankao-essay
 
 ```powershell
 # 只对本项目生效
-New-Item -ItemType Directory -Force -Path "D:\project\deeepseek\.dsh\skills" | Out-Null
-Copy-Item "D:\project\deeepseek\dsh-plugins\dsh-ruankao-essay\assets\*" "D:\project\deeepseek\.dsh\skills" -Recurse
+New-Item -ItemType Directory -Force -Path "$PWD\.dsh\skills" | Out-Null
+Copy-Item "<插件目录>\assets\*" "$PWD\.dsh\skills" -Recurse
 
 # 或对所有项目生效
-Copy-Item "D:\project\deeepseek\dsh-plugins\dsh-ruankao-essay\assets\*" "$env:USERPROFILE\.dsh\skills" -Recurse
+Copy-Item "<插件目录>\assets\*" "$env:USERPROFILE\.dsh\skills" -Recurse
+```
+
+```bash
+# macOS / Linux 等价写法
+mkdir -p "$PWD/.dsh/skills" && cp -R "<插件目录>/assets/." "$PWD/.dsh/skills/"
 ```
 
 两种方式的资产完全一致：`SKILL.md` 带 YAML frontmatter（供文件系统发现），插件提供者读取时会自动剥掉 frontmatter。
@@ -77,7 +82,7 @@ Copy-Item "D:\project\deeepseek\dsh-plugins\dsh-ruankao-essay\assets\*" "$env:US
 dsh-ruankao-essay/
 ├─ package.json          # dsh.bundle.patch、meta、icon、files、repository
 ├─ cordis.patch.yml      # 向 profile 插入 id: ruankao-essay 的 Host 插件行
-├─ index.js              # Cordis 插件：ctx.skills.registerProvider(...) 注册两个技能
+├─ index.js              # Cordis 插件：ctx.skills.registerProvider(...) 注册三个技能
 ├─ client.js             # Client 半：在 Web UI 注册题库速查面板
 ├─ icon.svg              # 插件卡片图标
 ├─ locale/{zh,en}.json   # 插件卡片标题与描述
@@ -85,77 +90,101 @@ dsh-ruankao-essay/
 ├─ SECURITY.md           # 安全策略与漏洞报告方式
 ├─ CONTRIBUTING.md       # 贡献指南与内容边界
 ├─ scripts/
-│  └─ verify-manifest.mjs        # 清单／技能资产／脚本 BOM／Client 半 校验
+│  ├─ verify-manifest.mjs        # 清单／技能资产／脚本 BOM／Client 半 校验
+│  ├─ build-client-data.mjs      # 题库数据生成器（topic-index.json → client.js / md）
+│  ├─ build-skill-descriptions.mjs # 技能描述生成器（SKILL.md frontmatter → index.js）
+│  └─ health-check.ps1           # 仓库巡检（Windows PowerShell）
 ├─ .github/workflows/
-│  ├─ ci.yml                     # CI：Linux 校验 + Windows 端到端测试
+│  ├─ ci.yml                     # CI：Linux 校验 + 门禁 PASS/FAIL 断言 + Windows 端到端测试
 │  └─ github-release.yml         # 打 tag 时只创建 GitHub Release（不发 npm）
 ├─ tests/
-│  ├─ fixtures/sample-essay.md   # 公开的 10 段测试样例
-│  └─ out/                       # 测试产物（已 gitignore）
+│  ├─ fixtures/sample-essay.md         # 公开的 10 段测试样例（供 doc 生成 e2e）
+│  ├─ fixtures/sample-essay-valid.md   # 合规样例（门禁应 PASS）
+│  ├─ fixtures/sample-essay-invalid.md # 负例样例（门禁应 FAIL）
+│  └─ out/                             # 测试产物（已 gitignore）
 └─ assets/
    ├─ ruankao-essay-writing/          # 技能一：写
    │  ├─ SKILL.md
    │  ├─ references/writing-rules.md
-   │  └─ scripts/make-essay-doc.ps1   # Markdown → Word 可打开的 .doc（含段数与字数自检）
+   │  └─ scripts/
+   │     ├─ check-essay.mjs           # 成稿门禁（跨平台，主路径）
+   │     ├─ make-essay-doc.mjs         # Markdown → Word 可打开的 .doc（跨平台，主路径）
+   │     ├─ check-essay.ps1            # 同上，Windows PowerShell 版
+   │     ├─ make-essay-doc.ps1         # 同上，Windows PowerShell 版
+   │     └─ ingest-essay.ps1           # 成稿入库（Windows）
    ├─ ruankao-essay-review/           # 技能三：评
    │  └─ SKILL.md                     # 逐段体检表＋五类扣分＋输出格式
    └─ ruankao-essay-bank/             # 技能二：查
       ├─ SKILL.md
-      └─ references/topic-index-lite.md
+      └─ references/
+         ├─ topic-index.json          # 题库唯一数据源（真题表／理论骨架／写作规格）
+         └─ topic-index-lite.md       # 由 topic-index.json 生成的公开索引
 ```
 
-脚本放在写作技能目录内，因此无论是「插件资源基」还是「技能目录」安装，`<skill-directory>/scripts/make-essay-doc.ps1` 都能正确定位。
+脚本放在写作技能目录内，因此无论是「插件资源基」还是「技能目录」安装，`<skill-directory>/scripts/check-essay.mjs` 与 `<skill-directory>/scripts/make-essay-doc.mjs` 都能正确定位。
+
+**跨平台**：`.mjs` 版是跨平台主路径（macOS / Linux / Windows 通用，只需 Node ≥ 20）；`.ps1` 版保留给 Windows PowerShell 5.1，两版口径一致（段按空行切块计数、直引号仅提示不阻断、第一人称排除「我国」「忘我」）。
 
 ## 四、用起来是什么样
 
 会话里出现「写软考系分论文 / 这个论文题目怎么写 / 押题」之类需求时，Agent 会加载技能，然后：
 
 1. 在 `references/topic-index-lite.md` 里定位题目（真题题名、通用理论骨架、写作规格、可选项目）；若本地 `references/` 下另有参考资料，优先按需读取；
-2. 按 10 段式规格成稿：**严格 10 段、含标点 2500~2800、无标题、无分点标号、无第一人称、周期只写首段**；
+2. 按 10 段式规格成稿：**严格 10 段、含标点 2500~2800、无标题、无分点标号、无第一人称、周期只写首段**（段位基准见 `ruankao-essay-review` 技能的段位表，段与段之间空行分隔）；
 3. 每个论点配一条项目业务实例，效果给量化数据，收尾写 2~3 条不足与改进；
-4. 用脚本产出 Word（用调用运算符，不要套 `pwsh -File`——本机 shell 里没有 `pwsh` 命令）：
+4. 先跑门禁、再产出 Word：
 
-```powershell
-& "<skill-directory>\scripts\make-essay-doc.ps1" -MdPath "D:\out\论微服务架构及其应用.md"
+```bash
+node "<skill-directory>/scripts/check-essay.mjs" --md "<成稿>.md" --require-terms "<子题目2的分类,逗号分隔>"
+# 结论: PASS —— 满足 10 段式交付规格与评分口径检查
+
+node "<skill-directory>/scripts/make-essay-doc.mjs" --md "<成稿>.md" --out "<成稿>.doc"
 # 段落数: 10  含标点字数: 2534  纯汉字: 2116
-# 已生成: D:\out\论微服务架构及其应用.doc
+# 已生成: <成稿>.doc
 ```
 
-脚本会剥掉 `**` 粗体标记并统计真实字数，段数应为 10、含标点字数落在 2500~2800。
+Windows 上也可以用 `check-essay.ps1` / `make-essay-doc.ps1`（用调用运算符直接执行，不要套 `pwsh -File`）。脚本会剥掉 `**` 粗体标记并统计真实字数，段数应为 10、含标点字数落在 2500~2800。
 
 ## 五、自制／扩展
 
-- **加题型**：往 `assets/ruankao-essay-bank/references/topic-index-lite.md` 追加真题题名与理论骨架；本地另有参考资料时同步维护即可。
-- **加技能**：在 `assets/` 下新建 `<kebab-case-name>/SKILL.md`（带 frontmatter），再到 `index.js` 的 `SKILLS` 数组登记一条，最后跑 `node scripts/verify-manifest.mjs` 确认资产齐全。
-- **改交付格式**：`assets/ruankao-essay-writing/scripts/make-essay-doc.ps1` 里的 `@page`／字体／字号／行距都可调；中文标点务必用 `[char]` 码点构造，脚本必须保存为**带 BOM 的 UTF-8**（Windows PowerShell 5.1 下无 BOM 会按 ANSI 误读中文，CI 会拦截）。
+- **加题型**：改 `assets/ruankao-essay-bank/references/topic-index.json`（唯一数据源），再运行 `node scripts/build-client-data.mjs`——`topic-index-lite.md` 与 Client 面板的题库表、理论骨架、写作规格会同步更新；CI 会用 `--check` 拦截忘记重新生成的提交。
+- **加技能**：在 `assets/` 下新建 `<kebab-case-name>/SKILL.md`（带 frontmatter），再到 `index.js` 的 `SKILLS` 数组登记一条，运行 `node scripts/build-skill-descriptions.mjs` 让描述与 frontmatter 对齐，最后跑 `node scripts/verify-manifest.mjs` 确认资产齐全。
+- **改交付格式**：`assets/ruankao-essay-writing/scripts/make-essay-doc.mjs`（跨平台主路径）与同名 `.ps1`（Windows）里的 `@page`／字体／字号／行距都可调；中文标点务必用码点 `0x201C`/`0x201D`/`0x2014` 构造，`.ps1` 必须保存为**带 BOM 的 UTF-8**（Windows PowerShell 5.1 下无 BOM 会按 ANSI 误读中文，CI 会拦截）。
 
 ## 六、验证与已知限制
 
 ### 本地一条命令跑全部校验
 
-```powershell
+```bash
 node --check index.js
 node --check client.js
 node scripts/verify-manifest.mjs
-# 校验清单字段、加载器补丁、技能资产与 frontmatter、脚本 BOM、Client 半
+# 校验清单字段、加载器补丁、技能资产与 frontmatter、脚本 BOM、Node 版脚本、Client 半
 ```
 
-它检查 9 项：`package.json` 的 `dsh.bundle.patch`／`manifestVersion`／`meta`／`icon`／`main` 与依赖声明、`cordis.patch.yml` 的 id 与包名、每个技能都有对应 `assets/<name>/SKILL.md` 且 frontmatter 的 `name` 与目录一致、生成脚本存在且带 UTF-8 BOM、`dsh.client` 声明与 `client.js` 的模块 id／槽位一致、必备文件齐全、`references/` 下只有公开文件被跟踪、以及**发布白名单只包含仓库已跟踪的文件**（防止把本机资料打包出去）。
+它检查十余项：`package.json` 的 `dsh.bundle.patch`／`manifestVersion`／`meta`／`icon`／`main` 与依赖声明、`cordis.patch.yml` 的 id 与包名、每个技能都有对应 `assets/<name>/SKILL.md` 且 frontmatter 的 `name` 与目录一致、生成脚本存在且带 UTF-8 BOM、Node 版门禁与生成脚本齐全且进了 `files` 白名单、`dsh.client` 声明与 `client.js` 的模块 id／槽位一致、必备文件齐全、**题库数据与技能描述和各自数据源一致**（自动跑两个生成器的 `--check`）、`references/` 下只有公开文件被跟踪、以及**发布白名单只包含仓库已跟踪的文件**（防止把本机资料打包出去）。
 
-### 端到端测试生成脚本
+### 端到端测试生成脚本与门禁
 
-```powershell
-& .\assets\ruankao-essay-writing\scripts\make-essay-doc.ps1 -MdPath .\tests\fixtures\sample-essay.md -OutPath .\tests\out\sample.doc
+```bash
+# 生成 .doc
+node assets/ruankao-essay-writing/scripts/make-essay-doc.mjs --md tests/fixtures/sample-essay.md --out /tmp/sample.doc
 # 段落数: 10  含标点字数: 1012  纯汉字: 870
+
+# 门禁：合规样例应 PASS（退出码 0），负例样例应 FAIL（退出码 1）
+node assets/ruankao-essay-writing/scripts/check-essay.mjs --md tests/fixtures/sample-essay-valid.md \
+  --require-terms "架构需求,架构设计,架构文档化,架构复审,架构实现,架构演化"
+node assets/ruankao-essay-writing/scripts/check-essay.mjs --md tests/fixtures/sample-essay-invalid.md
 ```
 
 ### CI（GitHub Actions）
 
-`.github/workflows/ci.yml` 在 push／PR 时跑两个作业：
+`.github/workflows/ci.yml` 在 push／PR 时跑三个作业：
 
 | 作业 | 运行环境 | 内容 |
 |---|---|---|
 | 清单与技能资产校验 | ubuntu-latest | `node --check index.js`、解析 JSON、跑 `verify-manifest.mjs`、确认 `references/` 下只有公开文件被跟踪 |
+| 门禁正负例测试 | ubuntu-latest | 对合规样例断言退出码 0，对负例样例断言退出码非 0 |
 | 生成脚本端到端测试 | windows-latest | 校验脚本保留 UTF-8 BOM，用 `tests/fixtures/sample-essay.md` 生成 `.doc`，断言段数为 10、正文无直引号且有中文引号 |
 
 另有 `.github/workflows/github-release.yml`：推送 `v*` tag 时先跑校验，再创建一个 GitHub Release（仅源码快照，不发布到 npm）。
@@ -164,7 +193,7 @@ node scripts/verify-manifest.mjs
 
 - 技能是否生效：装好后新开会话，用 `skill` 工具按名字加载 `ruankao-essay-bank`，能返回目录即成功；或在设置页插件清单里看到「软考系分论文助手」。
 - 插件只提供写作规范、公开考题信息与理论骨架；**项目与数据请使用你自己的真实项目**。
-- 本插件只提供技能与脚本，不含 UI 面板；若想要侧边栏可视化题库，需要再加 Client 插件（可用 `templates/decoration` 起步）。
+- 门禁与文档生成以 Node 版（`.mjs`）为主路径，**要求 Node ≥ 20**；`ingest-essay.ps1`（成稿入库）与 `scripts/health-check.ps1`（仓库巡检）目前**仅有 Windows PowerShell 版**，且依赖作者本机的 Windows 路径与本地私有题库文件，在其它系统上不可用。
 - `make-essay-doc.ps1` 在 Windows PowerShell 5.1 与 PowerShell 7 上均可用；脚本必须保持带 BOM 的 UTF-8，CI 会拦截丢失 BOM 的提交。
 
 ## 七、从 GitHub 安装

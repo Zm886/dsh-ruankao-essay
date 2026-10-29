@@ -30,7 +30,26 @@ if (-not $BankPath)  { $BankPath  = Join-Path $pluginRoot 'assets\ruankao-essay-
 if (-not $GatePath)  { $GatePath  = Join-Path $PSScriptRoot 'check-essay.ps1' }
 
 if (-not (Test-Path $MdPath))   { Write-Output ("[错误] 找不到成稿：" + $MdPath); exit 2 }
-if (-not (Test-Path $BankPath)) { Write-Output ("[错误] 找不到题库：" + $BankPath); exit 2 }
+
+# 本地题库（finished-essays.md）是作者私有资料，不随仓库分发；新环境首次运行时自动创建最小模板
+if (-not (Test-Path $BankPath)) {
+  $bankDir = Split-Path -Parent $BankPath
+  if ($bankDir -and -not (Test-Path $bankDir)) { New-Item -ItemType Directory -Force -Path $bankDir | Out-Null }
+  $template = @"
+# 成稿题库（本地私有，不随仓库分发）
+
+## 一、题库一览表
+
+| 序号 | 题目 | 出处 | 段数／字数 | 项目背景 | 文件 |
+|---|---|---|---|---|---|
+
+## 二、逐题记录
+
+## 三、跨题复用与选题建议
+"@
+  [System.IO.File]::WriteAllText($BankPath, $template, (New-Object System.Text.UTF8Encoding $false))
+  Write-Output ("已创建本地题库文件：" + $BankPath)
+}
 
 # ① 门禁
 Write-Output '---- 门禁校验 ----'

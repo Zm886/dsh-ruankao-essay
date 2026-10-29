@@ -5,6 +5,27 @@
 
 ## [Unreleased]
 
+### 单一来源与清理（本轮）
+
+- **题库数据单一来源**：新增 `assets/ruankao-essay-bank/references/topic-index.json`（真题题名／理论骨架／写作规格的唯一数据源）与生成器 `scripts/build-client-data.mjs`，`topic-index-lite.md` 与 Client 面板的对应内容改为从它生成。此前两份内容各写一遍，已经漂移过。
+- **技能描述单一来源**：新增 `scripts/build-skill-descriptions.mjs`，`index.js` 里的技能描述改为从各 `SKILL.md` 的 YAML frontmatter 生成。此前描述手写两份（插件方式与文件系统方式看到的文案不同）。
+- **CI 守卫**：两个生成器都支持 `--check`，`verify-manifest.mjs` 与 CI 会在生成区块与数据源不一致时失败，避免手改生成区块或忘记重新生成。
+- **清理机器专属路径**：移除巡检脚本里写死的 node 兜底路径与默认成稿目录、去掉写死的 Windows 绝对路径与用户名、把踩坑笔记里的个人产物路径改成通用占位；巡检脚本在找不到 `node`／`git` 时改为跳过而不是中断。
+- **成稿入库可用性**：`ingest-essay.ps1` 在本地私有题库文件缺失时自动创建最小模板，不再直接报错退出，新环境开箱可用。
+- **.doc HTML 转义**：生成 Word 时对正文中的 `& < >` 做转义，避免破坏 HTML 结构；`.mjs` 与 `.ps1` 两版口径一致。
+
+### 跨平台与口径统一（本轮）
+
+- **门禁与文档生成新增 Node 版**：新增 `assets/ruankao-essay-writing/scripts/check-essay.mjs` 与 `make-essay-doc.mjs`（Node ≥ 20，ESM，零依赖），macOS / Linux / Windows 通用；`.ps1` 版保留给 Windows PowerShell 5.1，两版口径一致。原先整套流程只在 Windows 上可跑。
+- **统一 10 段基准**：以 `ruankao-essay-review` 的段位表为唯一口径（摘要 → 缘由 → 概况与技术 → 回应子题目 2 → 正文 3 段 → 问题与效果 → 收尾（不足与改进）→ 结论），并同步修正写作技能、写作规则、题型索引与 Client 面板此前写成 9 段的地方。此前按写作技能的流程产稿会被门禁判段数不符。
+- **修正三处口径矛盾**：
+  ① 段数改按**空行切块**统计（一段折行不再被算成多段），源稿与 `.doc` 生成共用同一套段落口径；
+  ② 正文直引号由「必须改」降为**提示**——生成 `.doc` 时会自动转成中文引号，此前门禁与转换脚本互相矛盾；
+  ③ 第一人称统计排除「我国」「忘我」等固定搭配，首段「本人作为……」的身份交代不受影响。
+- **门禁纳入 CI**：新增合规样例 `tests/fixtures/sample-essay-valid.md` 与负例 `tests/fixtures/sample-essay-invalid.md`，CI 增加门禁正负例断言（此前门禁脚本本身从未被测试过）。
+- **`files` 白名单补齐**：`package.json` 纳入 `check-essay.ps1`、`ingest-essay.ps1`、`scripts/health-check.ps1`、两个 `.mjs` 与测试样例，避免打包漏文件。
+- **文档同步**：README 目录树、校验项数量、技能数量（两个 → 三个）、安装路径示例与已知限制按现状更新；`verify-manifest.mjs` 增加「Node 版脚本齐全且已进 files 白名单」断言。
+
 ### 新增
 
 - **成稿门禁 `assets/ruankao-essay-writing/scripts/check-essay.ps1`**：一条命令核对段数（必须 10）、含标点字数（2500~2800）、第一人称、禁写字眼与分点标号、Markdown 粗体、标题、直引号；未输出 PASS 不得交付。已写入写作技能第 7 步，成为规范的一部分。

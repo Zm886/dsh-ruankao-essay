@@ -5,7 +5,7 @@
 [CmdletBinding()]
 param(
   [switch]$SkipCi,
-  [string]$EssaysDir = 'D:\project\deeepseek\extract\parts'
+  [string]$EssaysDir = ''
 )
 
 $root = Split-Path -Parent $PSScriptRoot
@@ -20,54 +20,68 @@ Write-Output ('仓库：' + $root)
 Write-Output ''
 Write-Output '--- 1/4 清单校验（verify-manifest.mjs）---'
 $node = (Get-Command node -ErrorAction SilentlyContinue).Source
-if (-not $node) { $node = 'C:\Users\18814\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\node\bin\node.exe' }
-$verify = & $node (Join-Path $root 'scripts\verify-manifest.mjs') 2>&1
-$verifyCode = $LASTEXITCODE
-$verify | Select-Object -Last 2 | ForEach-Object { Write-Output ('  ' + $_) }
-if ($verifyCode -ne 0) { $problems += '清单校验未通过' } else { $notes += '清单校验 12 项通过' }
+if (-not $node) {
+  Write-Output '  （未找到 node，跳过清单校验）'
+  $notes += '未找到 node，跳过清单校验'
+} else {
+  $verify = & $node (Join-Path $root 'scripts\verify-manifest.mjs') 2>&1
+  $verifyCode = $LASTEXITCODE
+  $verify | Select-Object -Last 2 | ForEach-Object { Write-Output ('  ' + $_) }
+  if ($verifyCode -ne 0) { $problems += '清单校验未通过' } else { $notes += '清单校验通过' }
+}
 
-# 2) 隐私边界：本地资料不得入库
+# 2) 隐私边界：本地资料不得入库（依赖 git；git 不可用时跳过而不是让脚本崩）
 Write-Output ''
 Write-Output '--- 2/4 隐私边界（本地资料是否泄漏进版本库）---'
 Push-Location $root
-$tracked = git ls-files
-$private = @('courseware-3-4.md','exam-points.md','essay-bank.md','type-index.md','finished-essays.md','quick-cards.md')
-$leaked = @()
-foreach ($f in $private) {
-  $hit = $tracked | Where-Object { $_ -like ('*' + $f) }
-  if ($hit) { $leaked += ($f + ' -> ' + ($hit -join ',')) }
-}
-if ($leaked.Count -gt 0) { $problems += ('本地资料被跟踪：' + ($leaked -join '; ')) } else { $notes += ('6 份本地资料均未被跟踪') }
-
-# references 下新增的本地文件必须已被忽略，否则一次 git add -A 就会泄漏
-$unguarded = @()
-$refFiles = Get-ChildItem (Join-Path $root 'assets') -Recurse -Filter '*.md' -ErrorAction SilentlyContinue | Where-Object { $_.FullName -like '*\references\*' }
-foreach ($rf in $refFiles) {
-  $rel = $rf.FullName.Substring($root.Length + 1).Replace('\', '/')
-  if ($tracked -notcontains $rel) {
-    git check-ignore -q -- $rel
-    if ($LASTEXITCODE -ne 0) { $unguarded += $rel }
+$git = (Get-Command git -ErrorAction SilentlyContinue)
+if (-not $git) {
+  Write-Output '  （未找到 git，跳过版本库检查）'
+  $notes += '未找到 git，跳过隐私边界与工作区检查'
+} else {
+  $tracked = @()
+  try { $tracked = @(git ls-files 2>$null) } catch { $tracked = @() }
+  $private = @('courseware-3-4.md','exam-points.md','essay-bank.md','type-index.md','finished-essays.md','quick-cards.md')
+  $leaked = @()
+  foreach ($f in $private) {
+    $hit = $tracked | Where-Object { $_ -like ('*' + $f) }
+    if ($hit) { $leaked += ($f + ' -> ' + ($hit -join ',')) }
   }
+  if ($leaked.Count -gt 0) { $problems += ('本地资料被跟踪：' + ($leaked -join '; ')) } else { $notes += ('6 份本地资料均未被跟踪') }
+
+  # references 下新增的本地文件必须已被忽略，否则一次 git add -A 就会泄漏
+  $unguarded = @()
+  $refFiles = Get-ChildItem (Join-Path $root 'assets') -Recurse -Filter '*.md' -ErrorAction SilentlyContinue | Where-Object { $_.FullName -like '*\references\*' }
+  foreach ($rf in $refFiles) {
+    $rel = $rf.FullName.Substring($root.Length + 1).Replace('\', '/')
+    if ($tracked -notcontains $rel) {
+      git check-ignore -q -- $rel 2>$null
+      if ($LASTEXITCODE -ne 0) { $unguarded += $rel }
+    }
+  }
+  if ($unguarded.Count -gt 0) { $problems += ('本地资料未加忽略规则（有泄漏风险）：' + ($unguarded -join '、')) } else { $notes += 'references 下无未忽略的本地文件' }
+
+  $dirty = @()
+  try { $dirty = @(git status --porcelain 2>$null) } catch { $dirty = @() }
+  if ($dirty.Count -gt 0) { $notes += ('工作区有未提交改动 ' + $dirty.Count + ' 项（发布前请提交）') } else { $notes += '工作区干净' }
+
+  $notes += ('版本库跟踪文件 ' + $tracked.Count + ' 个')
 }
-if ($unguarded.Count -gt 0) { $problems += ('本地资料未加忽略规则（有泄漏风险）：' + ($unguarded -join '、')) } else { $notes += 'references 下无未忽略的本地文件' }
-
-$dirty = git status --porcelain
-if ($dirty) { $notes += ('工作区有未提交改动 ' + (@($dirty).Count) + ' 项（发布前请提交）') } else { $notes += '工作区干净' }
-
-$trackedCount = @($tracked).Count
-$notes += ('版本库跟踪文件 ' + $trackedCount + ' 个')
 Pop-Location
 
 # 3) 题库一致性：成稿篇数 vs 题库一览行数
 Write-Output ''
 Write-Output '--- 3/4 题库一致性（成稿 vs 一览表）---'
 if (-not (Test-Path $bank)) {
-  $problems += ('找不到题库：' + $bank)
+  Write-Output ('  （本地题库不存在，跳过题库一致性检查）')
+  $notes += '本地题库不存在，跳过题库一致性检查'
 } else {
   $rows = @(Select-String -Path $bank -Pattern '^\| \d+ \| 论' -Encoding UTF8).Count
   $essays = @()
-  if (Test-Path $EssaysDir) {
+  if ($EssaysDir -and (Test-Path $EssaysDir)) {
     $essays = Get-ChildItem $EssaysDir -Filter '论*.md' -Recurse | Where-Object { $_.BaseName -notmatch '速记卡|索引|改进点|课件' } | Sort-Object FullName -Unique
+  } else {
+    $notes += '未提供 -EssaysDir，已跳过成稿比对（仅统计题库行数）'
   }
   Write-Output ('  题库一览行：' + $rows + '    成稿文件：' + $essays.Count)
   if ($rows -ne $essays.Count) {

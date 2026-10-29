@@ -25,25 +25,34 @@ const ASSETS_BASE = new URL("./assets/", import.meta.url);
 /** 与 @deepseek-ai/dsh-skill 的 BUNDLED_SKILL_RANK 对齐：打包型技能提供者的标准优先级。 */
 const SKILL_RANK = 600;
 
+/**
+ * 技能描述（唯一来源：assets/<name>/SKILL.md 的 YAML frontmatter）。
+ * 由 `node scripts/build-skill-descriptions.mjs` 生成，请勿手改。
+ */
+// >>> BEGIN generated: skill-descriptions
+const SKILL_DESCRIPTIONS = {
+  "ruankao-essay-writing": "软考系统分析师论文写作与改写总纲。Write or rewrite a Chinese Soft Exam (软考) 系统分析师 essay from a 论文题目 (with its 三个子题目) or from the user's draft: forces a strict 10-paragraph structure, exact word-count band, no titles/no sub-headings/no first person, explicit sub-question coverage, at least one real project instance per argument, and delivery as a Word .doc plus .md. Use whenever the task is 软考系分论文, 论文改写, 论文押题, or 考场论文成稿.",
+  "ruankao-essay-review": "软考系统分析师论文自评与批改。Review a finished Chinese Soft Exam (软考) 系统分析师 essay against the public scoring norms and return a per-paragraph verdict: sub-question coverage, 10-paragraph structure, word-count band, forbidden patterns (titles, first person, enumerated starters), theory accuracy, project-instance grounding, quantified results, and a closing weakness-and-improvement pair; then propose concrete rewrites. Use when the user submits a draft or finished essay and asks to 自评, 批改, 打分, 查漏, or 提分, or asks whether an essay is ready to submit.",
+  "ruankao-essay-bank": "软考系统分析师论文题库与写作规范。Look up Chinese Soft Exam (软考) 系统分析师 essay topics: the 2016–2026 真题 table, per-topic theory skeletons, writing specification, scoring pitfalls and project-background guidance. Use when the user asks which 论文题目 exist, what theory points a topic needs, what project or quantified data to cite, or before writing any 软考系分 essay.",
+};
+// <<< END generated: skill-descriptions
+
 /** 本插件提供的技能清单（目录名＝技能名）。 */
 const SKILLS = [
   {
     dir: "ruankao-essay-writing",
     name: "ruankao-essay-writing",
-    description:
-      "软考系统分析师论文写作与改写总纲。Write or rewrite a Chinese Soft Exam (软考) 系统分析师 essay from a 论文题目 (with its 三个子题目) or from the user's draft: forces a strict 10-paragraph structure, exact word-count band, no titles/no sub-headings/no first person, explicit sub-question coverage, at least one real project instance per argument, and delivery as a Word .doc plus .md. Use whenever the task is 软考系分论文, 论文改写, 论文押题, or 考场论文成稿.",
+    description: SKILL_DESCRIPTIONS["ruankao-essay-writing"],
   },
   {
     dir: "ruankao-essay-review",
     name: "ruankao-essay-review",
-    description:
-      "软考系统分析师论文自评与批改。Review a finished Chinese Soft Exam (软考) 系统分析师 essay against the public scoring norms and return a per-paragraph verdict: sub-question coverage, 10-paragraph structure, word-count band, forbidden patterns (titles, first person, enumerated starters), theory accuracy, project-instance grounding, quantified results, and a closing weakness-and-improvement pair; then propose concrete rewrites. Use when the user submits a draft or finished essay and asks to 自评, 批改, 打分, 查漏, or 提分, or asks whether an essay is ready to submit.",
+    description: SKILL_DESCRIPTIONS["ruankao-essay-review"],
   },
   {
     dir: "ruankao-essay-bank",
     name: "ruankao-essay-bank",
-    description:
-      "软考系统分析师论文题库与写作规范。Look up Chinese Soft Exam (软考) 系统分析师 essay topics and reusable material: the 2016–2026 真题 table, per-topic theory skeletons, writing specification and scoring pitfalls, plus the project-background guidance needed before writing. Use when the user asks which 论文题目 exist, what theory points a topic needs, what project or quantified data to cite, or before writing any 软考系分 essay.",
+    description: SKILL_DESCRIPTIONS["ruankao-essay-bank"],
   },
 ];
 

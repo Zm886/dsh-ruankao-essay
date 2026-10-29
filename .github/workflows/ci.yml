@@ -31,6 +31,11 @@ jobs:
       - name: 校验清单与技能一致性
         run: node scripts/verify-manifest.mjs
 
+      - name: 生成区块必须与数据源一致（题库数据 / 技能描述）
+        run: |
+          node scripts/build-client-data.mjs --check
+          node scripts/build-skill-descriptions.mjs --check
+
       - name: 确认 references 下只有公开文件被跟踪
         run: |
           unexpected=$(git ls-files | grep '/references/' | grep -vE 'references/(topic-index-lite|writing-rules)\.md$' || true)
@@ -40,6 +45,58 @@ jobs:
             exit 1
           fi
           echo "only public reference files are tracked"
+
+  gate-tests:
+    name: 成稿门禁自检（Node）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 语法检查 check-essay.mjs
+        run: node --check assets/ruankao-essay-writing/scripts/check-essay.mjs
+
+      - name: 合规样本必须通过门禁（退出码 0）
+        run: |
+          set -uo pipefail
+          set +e
+          output=$(node assets/ruankao-essay-writing/scripts/check-essay.mjs \
+            --md tests/fixtures/sample-essay-valid.md \
+            --require-terms "架构需求,架构设计,架构文档化,架构复审,架构实现,架构演化" 2>&1)
+          code=$?
+          set -e
+          echo "$output"
+          if [ "$code" -ne 0 ]; then
+            echo "::error::合规样本应通过门禁，实际退出码 $code"
+            exit 1
+          fi
+          case "$output" in
+            *"PASS"*) ;;
+            *) echo "::error::合规样本输出缺少 PASS 结论"; exit 1 ;;
+          esac
+          echo "valid fixture passed the gate"
+
+      - name: 负例样本必须不达标（退出码非 0 且输出含「不达标」）
+        run: |
+          set -uo pipefail
+          set +e
+          output=$(node assets/ruankao-essay-writing/scripts/check-essay.mjs \
+            --md tests/fixtures/sample-essay-invalid.md 2>&1)
+          code=$?
+          set -e
+          echo "$output"
+          if [ "$code" -eq 0 ]; then
+            echo "::error::负例样本不应通过门禁，实际退出码 0"
+            exit 1
+          fi
+          case "$output" in
+            *"不达标"*) ;;
+            *) echo "::error::负例样本输出缺少「不达标」结论"; exit 1 ;;
+          esac
+          echo "invalid fixture failed the gate as expected (exit $code)"
 
   word-script:
     name: 生成脚本端到端测试（Windows PowerShell 5.1）

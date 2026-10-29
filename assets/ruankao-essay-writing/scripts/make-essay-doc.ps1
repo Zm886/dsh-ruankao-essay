@@ -9,6 +9,8 @@
 #   1) 中文引号与破折号必须用 [char] 码点构造，直接写字面量在部分调用方式下会被吞掉。
 #   2) 输出用带 BOM 的 UTF-8，Word 打开不乱码。
 #   3) 目标文件被 Word 占用时自动重试，仍失败则另存 *_v2.doc。
+#   4) 段落切分口径与 check-essay.ps1 / check-essay.mjs / make-essay-doc.mjs 完全一致：
+#      空行切块，一块 = 一段（一个 <p>），块内换行直接拼接，去掉行首 # 与 ** 标记。
 
 [CmdletBinding()]
 param(
@@ -35,10 +37,32 @@ if ($outDir -and -not (Test-Path -LiteralPath $outDir)) {
   New-Item -ItemType Directory -Force -Path $outDir | Out-Null
 }
 
-# 读源稿：跳过 HTML 注释行，去掉空行与行首标记
-$lines = Get-Content -LiteralPath $MdPath -Encoding UTF8 |
-  ForEach-Object { $_.Trim() } |
-  Where-Object { $_ -ne '' -and $_ -notmatch '^<!--' }
+# 读源稿：整体剥掉 HTML 注释（含多行），再按空行切块（每块 = 一段）
+$rawText = [System.IO.File]::ReadAllText($MdPath, [System.Text.Encoding]::UTF8)
+$textNoComment = [regex]::Replace($rawText, '(?s)<!--.*?-->', '')
+$rawLines = @($textNoComment -split "\r?\n")
+
+$blocks = @()
+$block = @()
+foreach ($rawLine in $rawLines) {
+  $trimmed = $rawLine.Trim()
+  if ($trimmed -eq '') {
+    if ($block.Count -gt 0) { $blocks += ,@($block); $block = @() }
+    continue
+  }
+  $block += $trimmed
+}
+if ($block.Count -gt 0) { $blocks += ,@($block) }
+
+# 每段正文：块内换行直接拼接（不插空格），去掉行首 # 与 ** 标记
+$paras = @()
+foreach ($b in $blocks) {
+  $joined = ''
+  foreach ($ln in $b) {
+    $joined += ($ln -replace '^#{1,6}\s*', '' -replace '\*\*', '')
+  }
+  $paras += $joined
+}
 
 $q1 = ([char]0x201C).ToString()   # 左双引号
 $q2 = ([char]0x201D).ToString()   # 右双引号
@@ -46,20 +70,21 @@ $dash = ([char]0x2014).ToString() # 破折号
 
 $sb = New-Object System.Text.StringBuilder
 [void]$sb.AppendLine('<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">')
-[void]$sb.AppendLine('<head><meta http-equiv="Content-Type" content="text/html; charset=utf-8">')
+[void]$sb.AppendLine('<head><meta charset=utf-8><meta http-equiv="Content-Type" content="text/html; charset=utf-8">')
 [void]$sb.AppendLine('<title>Document</title>')
 [void]$sb.AppendLine('<style>@page{size:A4;margin:2.54cm 3.17cm;} body{line-height:1.5;} p{font-family:SimSun;font-size:12.0pt;line-height:1.5;text-indent:24.0pt;margin:0;text-align:justify;}</style></head><body>')
 
-foreach ($line in $lines) {
-  $text = $line -replace '^#+\s*', '' -replace '\*\*', ''
-  $text = [regex]::Replace($text, '"([^"]*)"', ($q1 + '$1' + $q2))
-  $text = $text.Replace($dash, ($dash + $dash))
+foreach ($p in $paras) {
+  $text = [regex]::Replace($p, '"([^"]*)"', ($q1 + '$1' + $q2))
+  $text = [regex]::Replace($text, ([regex]::Escape($dash) + '+'), ($dash + $dash))
+  # HTML 转义：正文若含 & < > 会破坏 .doc 结构；顺序：先 & 再 < >
+  $text = $text.Replace('&', '&amp;').Replace('<', '&lt;').Replace('>', '&gt;')
   [void]$sb.AppendLine('<p>' + $text + '</p>')
 }
 [void]$sb.AppendLine('</body></html>')
 
 # 段数与含标点字数（自检用）
-$body = ($lines -join '')
+$body = ($paras -join '')
 $chars = ($body -replace '\s', '').Length
 $hanzi = ($body.ToCharArray() | Where-Object { [int]$_ -ge 0x4E00 -and [int]$_ -le 0x9FA5 }).Count
 
@@ -80,5 +105,5 @@ try {
   }
 }
 
-Write-Output ("段落数: {0}  含标点字数: {1}  纯汉字: {2}" -f $lines.Count, $chars, $hanzi)
+Write-Output ("段落数: {0}  含标点字数: {1}  纯汉字: {2}" -f $paras.Count, $chars, $hanzi)
 Write-Output ("已生成: {0}" -f $target)
