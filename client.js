@@ -278,6 +278,7 @@ window.__ModuleLoader__.load({
       zh: {
         'launcher.title': '软考系分论文题库',
         'launcher.label': '打开题库速查',
+        'tooltip.hint': '历年真题 / 题型骨架 / 写作规格',
         'panel.title': '软考系分论文题库',
         'panel.subtitle': '{years} 场真题 · {topics} 类题型骨架 · {rules} 条写作规格',
         'panel.close': '关闭题库',
@@ -295,6 +296,7 @@ window.__ModuleLoader__.load({
       en: {
         'launcher.title': 'Soft Exam essay topic bank',
         'launcher.label': 'Open the topic bank',
+        'tooltip.hint': 'exam titles / theory skeletons / writing spec',
         'panel.title': 'Soft Exam essay topic bank',
         'panel.subtitle': '{years} exam sittings · {topics} topic skeletons · {rules} writing rules',
         'panel.close': 'Close the topic bank',
@@ -326,7 +328,7 @@ window.__ModuleLoader__.load({
 
     /** 面板开合状态：入口按钮与模态层分处两个槽位，用一个极小的 store 共享。 */
     function createStore() {
-      let state = { open: false, tab: 'exam', query: '' };
+      let state = { open: false, tab: 'exam', query: '', tip: null };
       const listeners = new Set();
       return {
         get() {
@@ -375,14 +377,43 @@ window.__ModuleLoader__.load({
       const { store, t } = props;
       const state = useStore(store);
       const label = t('launcher.title');
+      const buttonRef = React.useRef(null);
+      const timerRef = React.useRef(null);
+
+      // 悬浮提示：延迟一点再出现，避免鼠标路过时闪烁；提示本体渲染在 shell.overlay，
+      // 用按钮的真实位置定位，因此不会被 composer 卡片的 overflow 裁掉。
+      const showTip = () => {
+        if (timerRef.current) return;
+        timerRef.current = setTimeout(() => {
+          timerRef.current = null;
+          const node = buttonRef.current;
+          if (!node) return;
+          const rect = node.getBoundingClientRect();
+          store.set({ tip: { top: rect.top, left: rect.left, width: rect.width } });
+        }, 420);
+      };
+      const hideTip = () => {
+        if (timerRef.current) {
+          clearTimeout(timerRef.current);
+          timerRef.current = null;
+        }
+        store.set({ tip: null });
+      };
+      React.useEffect(() => () => {
+        if (timerRef.current) clearTimeout(timerRef.current);
+      }, []);
+
       return h(
         'button',
         {
+          ref: buttonRef,
           type: 'button',
-          title: label,
           'aria-label': t('launcher.label'),
           'aria-expanded': state.open ? 'true' : 'false',
-          onClick: () => store.set({ open: !state.open }),
+          onClick: () => {
+            hideTip();
+            store.set({ open: !state.open });
+          },
           style: {
             display: 'inline-flex',
             alignItems: 'center',
@@ -401,13 +432,63 @@ window.__ModuleLoader__.load({
           onMouseEnter: (event) => {
             event.currentTarget.style.background = T.surfaceAlt;
             event.currentTarget.style.color = T.text;
+            showTip();
           },
           onMouseLeave: (event) => {
             event.currentTarget.style.background = 'transparent';
             event.currentTarget.style.color = T.textMuted;
+            hideTip();
           },
+          onFocus: showTip,
+          onBlur: hideTip,
         },
         h(BankIcon, { size: 17 }),
+      );
+    }
+
+    /** 悬浮提示气泡：跟随按钮定位，pointer-events:none 不挡交互。 */
+    function TipBubble(props) {
+      const { store, t } = props;
+      const state = useStore(store);
+      if (!state.tip) return null;
+      const { top, left, width } = state.tip;
+      return h(
+        'div',
+        {
+          'aria-hidden': true,
+          style: {
+            position: 'fixed',
+            top: top - 10,
+            left: left + width / 2,
+            transform: 'translate(-50%, -100%)',
+            zIndex: 58,
+            pointerEvents: 'none',
+            maxWidth: 260,
+            padding: '7px 10px',
+            borderRadius: 8,
+            border: `1px solid ${T.borderStrong}`,
+            background: T.surfaceAlt,
+            color: T.text,
+            boxShadow: '0 8px 22px rgba(0, 0, 0, 0.22)',
+            fontSize: 12,
+            lineHeight: 1.5,
+            whiteSpace: 'nowrap',
+            opacity: 0,
+            animation: 'none',
+            transition: 'opacity 140ms ease',
+          },
+          ref: (node) => {
+            if (node) {
+              node.style.opacity = '1';
+            }
+          },
+        },
+        h('span', { style: { fontWeight: 600 } }, t('launcher.title')),
+        h(
+          'span',
+          { style: { color: T.textMuted, marginLeft: 6 } },
+          t('tooltip.hint'),
+        ),
       );
     }
 
@@ -811,6 +892,17 @@ window.__ModuleLoader__.load({
       );
     }
 
+    /** shell.overlay 层：悬浮提示气泡 + 题库模态卡（两者共用同一个 store）。 */
+    function OverlayLayer(props) {
+      const { store, t } = props;
+      return h(
+        React.Fragment,
+        null,
+        h(TipBubble, { store, t }),
+        h(TopicBankPanel, { store, t }),
+      );
+    }
+
     return {
       // 只依赖 slots：与 DSH 自带 decoration 模板一致的最小依赖形态，减少激活失败面。
       inject: ['slots'],
@@ -848,7 +940,7 @@ window.__ModuleLoader__.load({
           id: 'ruankao-topic-bank-panel',
           order: 20,
           label: t('panel.title'),
-        }, (props) => h(TopicBankPanel, { ...props, store, t })));
+        }, (props) => h(OverlayLayer, { ...props, store, t })));
       },
     };
   },
