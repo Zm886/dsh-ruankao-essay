@@ -273,98 +273,541 @@ window.__ModuleLoader__.load({
   "交付：`.doc`（Word 可打开）＋ `.md` 源稿，文件名与题目一致"
 ];
     // <<< END generated: client-data
-
     // ---- 文案字典：zh / en 键集必须一致 ----
     const DICT = {
       zh: {
-        'panel.open': '题库速查',
-        'panel.close': '收起题库',
-        'panel.summary': '{years} 年真题 · {topics} 类题型',
-        'panel.hint': '真题题名 / 题型骨架 / 写作规格',
-        'tab.exam': '历年真题',
-        'tab.theory': '题型骨架',
-        'tab.rules': '写作规格',
-        'filter.label': '按年份',
-        'filter.all': '全部年份',
-        'filter.empty': '该年份暂无记录',
+        'launcher.title': '软考系分论文题库',
+        'launcher.label': '打开题库速查',
+        'panel.title': '软考系分论文题库',
+        'panel.subtitle': '{years} 场真题 · {topics} 类题型骨架 · {rules} 条写作规格',
+        'panel.close': '关闭题库',
+        'panel.search': '搜索题名、理论点或写作规格',
+        'panel.searchEmpty': '没有匹配的条目，换个关键词试试',
+        'panel.tab.exam': '历年真题',
+        'panel.tab.theory': '题型骨架',
+        'panel.tab.rules': '写作规格',
+        'panel.exam.empty': '该场次暂无记录',
+        'panel.exam.paper': '试题',
+        'panel.theory.points': '要点',
+        'panel.rules.item': '规格',
+        'panel.footer': '题库为公开资料；项目背景与数据请使用你自己的真实项目',
       },
       en: {
-        'panel.open': 'Topic bank',
-        'panel.close': 'Hide topic bank',
-        'panel.summary': '{years} exam sittings · {topics} topic groups',
-        'panel.hint': 'titles / theory skeletons / writing spec',
-        'tab.exam': 'Exam titles',
-        'tab.theory': 'Theory skeletons',
-        'tab.rules': 'Writing spec',
-        'filter.label': 'Year',
-        'filter.all': 'All years',
-        'filter.empty': 'No record for this year',
+        'launcher.title': 'Soft Exam essay topic bank',
+        'launcher.label': 'Open the topic bank',
+        'panel.title': 'Soft Exam essay topic bank',
+        'panel.subtitle': '{years} exam sittings · {topics} topic skeletons · {rules} writing rules',
+        'panel.close': 'Close the topic bank',
+        'panel.search': 'Search titles, theory points or writing rules',
+        'panel.searchEmpty': 'No match — try another keyword',
+        'panel.tab.exam': 'Exam titles',
+        'panel.tab.theory': 'Theory skeletons',
+        'panel.tab.rules': 'Writing spec',
+        'panel.exam.empty': 'No record for this sitting',
+        'panel.exam.paper': 'Paper',
+        'panel.theory.points': 'Points',
+        'panel.rules.item': 'Rule',
+        'panel.footer': 'Public material only; use your own real project data',
       },
     };
 
-    const surface = 'rgba(127,127,127,0.10)';
-    const border = '1px solid rgba(127,127,127,0.28)';
 
-    function TopicBank(props) {
-      const t = props.t;
-      const [open, setOpen] = React.useState(false);
-      const [tab, setTab] = React.useState('exam');
-      const [year, setYear] = React.useState('all');
+    /** 主题 token：容器与控件一律用宿主 token，浅色/深色自动跟随。 */
+    const T = {
+      overlay: 'var(--dsw-alias-bg-overlay)',
+      surface: 'var(--dsw-alias-bg-layer-1)',
+      surfaceAlt: 'var(--dsw-alias-bg-layer-2)',
+      border: 'var(--dsw-alias-border-l1)',
+      borderStrong: 'var(--dsw-alias-border-l2)',
+      brand: 'var(--dsw-alias-brand-primary)',
+      text: 'var(--dsw-alias-label-primary)',
+      textMuted: 'var(--dsw-alias-label-secondary)',
+    };
 
-      const box = { maxHeight: '42vh', overflow: 'auto', padding: '8px 10px', border: border, borderRadius: 8, marginTop: 6, background: surface, fontSize: 13, lineHeight: 1.55 };
-      const chip = { padding: '2px 8px', border: border, borderRadius: 999, background: 'transparent', color: 'inherit', cursor: 'pointer', fontSize: 12, marginRight: 6 };
-      const chipOn = { ...chip, background: 'rgba(127,127,127,0.22)', fontWeight: 600 };
-      const select = { ...chip, marginRight: 0, padding: '2px 6px' };
+    /** 面板开合状态：入口按钮与模态层分处两个槽位，用一个极小的 store 共享。 */
+    function createStore() {
+      let state = { open: false, tab: 'exam', query: '' };
+      const listeners = new Set();
+      return {
+        get() {
+          return state;
+        },
+        set(patch) {
+          state = { ...state, ...patch };
+          for (const listener of listeners) listener();
+        },
+        subscribe(listener) {
+          listeners.add(listener);
+          return () => listeners.delete(listener);
+        },
+      };
+    }
 
-      const exams = year === 'all' ? EXAMS : EXAMS.filter((item) => item.year === year);
+    function useStore(store) {
+      const [state, setState] = React.useState(store.get);
+      React.useEffect(() => store.subscribe(() => setState(store.get())), [store]);
+      return state;
+    }
 
-      const body = tab === 'exam'
-        ? h('div', null,
-            h('div', { style: { marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 } },
-              h('span', { style: { opacity: 0.75 } }, t('filter.label')),
-              h('select', {
-                value: year,
-                onChange: (event) => setYear(event.target.value),
-                style: select,
+    /** 入口图标：书本 + 列表，纯 currentColor，随主题与宿主字体颜色走。 */
+    function BankIcon(props) {
+      const size = props.size || 16;
+      return h(
+        'svg',
+        {
+          viewBox: '0 0 24 24',
+          width: size,
+          height: size,
+          fill: 'none',
+          stroke: 'currentColor',
+          strokeWidth: 1.7,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round',
+          'aria-hidden': true,
+          style: { display: 'block', flex: 'none' },
+        },
+        h('path', { d: 'M4 5.5A1.5 1.5 0 0 1 5.5 4H10a2 2 0 0 1 2 2v13a1.6 1.6 0 0 0-1.6-1.6H4z' }),
+        h('path', { d: 'M20 5.5A1.5 1.5 0 0 0 18.5 4H14a2 2 0 0 0-2 2v13a1.6 1.6 0 0 1 1.6-1.6H20z' }),
+      );
+    }
+
+    function Launcher(props) {
+      const { store, t } = props;
+      const state = useStore(store);
+      const label = t('launcher.title');
+      return h(
+        'button',
+        {
+          type: 'button',
+          title: label,
+          'aria-label': t('launcher.label'),
+          'aria-expanded': state.open ? 'true' : 'false',
+          onClick: () => store.set({ open: !state.open }),
+          style: {
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 28,
+            height: 28,
+            padding: 0,
+            borderRadius: 8,
+            border: '1px solid transparent',
+            background: 'transparent',
+            color: T.textMuted,
+            cursor: 'pointer',
+            pointerEvents: 'auto',
+            transition: 'background 120ms ease, color 120ms ease, border-color 120ms ease',
+          },
+          onMouseEnter: (event) => {
+            event.currentTarget.style.background = T.surfaceAlt;
+            event.currentTarget.style.color = T.text;
+          },
+          onMouseLeave: (event) => {
+            event.currentTarget.style.background = 'transparent';
+            event.currentTarget.style.color = T.textMuted;
+          },
+        },
+        h(BankIcon, { size: 17 }),
+      );
+    }
+
+    function TabBar(props) {
+      const { tab, onChange, t } = props;
+      const tabs = [
+        { id: 'exam', label: t('panel.tab.exam') },
+        { id: 'theory', label: t('panel.tab.theory') },
+        { id: 'rules', label: t('panel.tab.rules') },
+      ];
+      return h(
+        'div',
+        {
+          role: 'tablist',
+          style: { display: 'flex', gap: 18, borderBottom: `1px solid ${T.border}`, padding: '0 2px' },
+        },
+        tabs.map((item) => {
+          const active = item.id === tab;
+          return h(
+            'button',
+            {
+              key: item.id,
+              type: 'button',
+              role: 'tab',
+              'aria-selected': active ? 'true' : 'false',
+              onClick: () => onChange(item.id),
+              style: {
+                appearance: 'none',
+                background: 'transparent',
+                border: 'none',
+                borderBottom: `2px solid ${active ? T.brand : 'transparent'}`,
+                color: active ? T.text : T.textMuted,
+                fontSize: 13,
+                fontWeight: active ? 600 : 400,
+                lineHeight: 1.4,
+                padding: '8px 2px 7px',
+                marginBottom: -1,
+                cursor: 'pointer',
               },
-                h('option', { value: 'all' }, t('filter.all')),
-                EXAMS.map((item) => h('option', { key: item.year, value: item.year }, item.year))
-              )
-            ),
-            exams.length === 0
-              ? h('div', { style: { opacity: 0.7 } }, t('filter.empty'))
-              : exams.map((item) => h('div', { key: item.year, style: { marginBottom: 6 } },
-                  h('span', { style: { fontWeight: 600, marginRight: 6 } }, item.year),
-                  h('span', null, item.titles.join('；'))
-                ))
-          )
-        : tab === 'theory'
-          ? h('div', null,
-              SKELETONS.map((skeleton) => h('div', { key: skeleton.name, style: { marginBottom: 8 } },
-                h('div', { style: { fontWeight: 600 } }, skeleton.name),
-                h('ul', { style: { margin: '2px 0 0 18px', padding: 0 } }, skeleton.points.map((point, index) => h('li', { key: index }, point)))
-              ))
-            )
-          : h('ul', { style: { margin: 0, paddingLeft: 18 } }, RULES.map((rule, index) => h('li', { key: index, style: { marginBottom: 4 } }, rule)));
+            },
+            item.label,
+          );
+        }),
+      );
+    }
 
-      return h('div', { style: { fontSize: 13, color: 'inherit' } },
-        h('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } },
-          h('button', {
-            type: 'button',
-            onClick: () => setOpen(!open),
-            style: { ...chip, marginRight: 0 },
-            title: t('panel.open'),
-          }, (open ? t('panel.close') : t('panel.open')) + ' · ' + t('panel.summary', { years: EXAMS.length, topics: SKELETONS.length })),
-          h('span', { style: { opacity: 0.7, fontSize: 12 } }, t('panel.hint'))
-        ),
-        open && h('div', { style: box },
-          h('div', { style: { marginBottom: 6 } },
-            h('button', { type: 'button', style: tab === 'exam' ? chipOn : chip, onClick: () => setTab('exam') }, t('tab.exam')),
-            h('button', { type: 'button', style: tab === 'theory' ? chipOn : chip, onClick: () => setTab('theory') }, t('tab.theory')),
-            h('button', { type: 'button', style: tab === 'rules' ? chipOn : chip, onClick: () => setTab('rules') }, t('tab.rules'))
+    function ExamList(props) {
+      const { exams, t } = props;
+      if (exams.length === 0) {
+        return h('div', { style: { color: T.textMuted, fontSize: 13, padding: '18px 2px' } }, t('panel.exam.empty'));
+      }
+      return h(
+        'div',
+        { style: { display: 'flex', flexDirection: 'column', gap: 10 } },
+        exams.map((exam) =>
+          h(
+            'section',
+            {
+              key: exam.year,
+              style: {
+                border: `1px solid ${T.border}`,
+                borderRadius: 10,
+                background: T.surface,
+                padding: '10px 12px',
+              },
+            },
+            h(
+              'div',
+              { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 } },
+              h(
+                'span',
+                {
+                  style: {
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: T.brand,
+                    background: T.surfaceAlt,
+                    borderRadius: 6,
+                    padding: '1px 7px',
+                    letterSpacing: '0.02em',
+                  },
+                },
+                exam.year,
+              ),
+              h('span', { style: { fontSize: 12, color: T.textMuted } }, t('panel.exam.paper')),
+            ),
+            h(
+              'ol',
+              { style: { margin: 0, paddingLeft: 18, columns: 2, columnGap: 20 } },
+              exam.titles.map((title, index) =>
+                h(
+                  'li',
+                  {
+                    key: `${exam.year}-${index}`,
+                    style: { fontSize: 13, lineHeight: 1.7, color: T.text, breakInside: 'avoid' },
+                  },
+                  title,
+                ),
+              ),
+            ),
           ),
-          body
-        )
+        ),
+      );
+    }
+
+    function TheoryList(props) {
+      const { skeletons, t } = props;
+      if (skeletons.length === 0) {
+        return h('div', { style: { color: T.textMuted, fontSize: 13, padding: '18px 2px' } }, t('panel.searchEmpty'));
+      }
+      return h(
+        'div',
+        { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
+        skeletons.map((skeleton) =>
+          h(
+            'section',
+            {
+              key: skeleton.name,
+              style: {
+                border: `1px solid ${T.border}`,
+                borderRadius: 10,
+                background: T.surface,
+                padding: '9px 12px',
+              },
+            },
+            h(
+              'div',
+              { style: { display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 3 } },
+              h('span', { style: { fontSize: 13, fontWeight: 600, color: T.text } }, skeleton.name),
+              h('span', { style: { fontSize: 11, color: T.textMuted } }, t('panel.theory.points')),
+            ),
+            h(
+              'ul',
+              { style: { margin: 0, paddingLeft: 16 } },
+              skeleton.points.map((point, index) =>
+                h(
+                  'li',
+                  { key: index, style: { fontSize: 12.5, lineHeight: 1.65, color: T.textMuted } },
+                  point,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    function RuleList(props) {
+      const { rules, t } = props;
+      if (rules.length === 0) {
+        return h('div', { style: { color: T.textMuted, fontSize: 13, padding: '18px 2px' } }, t('panel.searchEmpty'));
+      }
+      return h(
+        'ol',
+        { style: { margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 7 } },
+        rules.map((rule, index) =>
+          h(
+            'li',
+            {
+              key: index,
+              style: {
+                fontSize: 13,
+                lineHeight: 1.7,
+                color: T.text,
+                borderLeft: `2px solid ${T.border}`,
+                paddingLeft: 10,
+              },
+            },
+            rule,
+          ),
+        ),
+      );
+    }
+
+    function TopicBankPanel(props) {
+      const { store, t } = props;
+      const state = useStore(store);
+      const inputRef = React.useRef(null);
+
+      React.useEffect(() => {
+        if (!state.open) return undefined;
+        const onKeyDown = (event) => {
+          if (event.key === 'Escape') {
+            event.stopPropagation();
+            store.set({ open: false });
+          }
+        };
+        document.addEventListener('keydown', onKeyDown);
+        const timer = setTimeout(() => {
+          if (inputRef.current) inputRef.current.focus();
+        }, 0);
+        return () => {
+          document.removeEventListener('keydown', onKeyDown);
+          clearTimeout(timer);
+        };
+      }, [state.open, store]);
+
+      if (!state.open) return null;
+
+      const query = state.query.trim().toLowerCase();
+      const match = (text) => (query ? String(text).toLowerCase().includes(query) : true);
+      const exams = query
+        ? EXAMS.map((exam) => ({
+            year: exam.year,
+            titles: exam.titles.filter(match),
+          })).filter((exam) => exam.titles.length > 0)
+        : EXAMS;
+      const skeletons = query
+        ? SKELETONS.map((skeleton) => ({
+            name: skeleton.name,
+            points: skeleton.points.filter(match),
+          })).filter((skeleton) => skeleton.points.length > 0)
+        : SKELETONS;
+      const rules = query ? RULES.filter(match) : RULES;
+      const empty =
+        (state.tab === 'exam' && exams.length === 0) ||
+        (state.tab === 'theory' && skeletons.length === 0) ||
+        (state.tab === 'rules' && rules.length === 0);
+
+      const panelWidth = 'min(92vw, 760px)';
+
+      return h(
+        'div',
+        {
+          style: {
+            position: 'fixed',
+            inset: 0,
+            zIndex: 60,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 24,
+            background: 'rgba(0, 0, 0, 0.32)',
+            // shell.overlay 整层 click-through，子元素须自行 opt-in 才能接收指针事件
+            pointerEvents: 'auto',
+          },
+          onClick: (event) => {
+            if (event.target === event.currentTarget) store.set({ open: false });
+          },
+        },
+        h(
+          'div',
+          {
+            role: 'dialog',
+            'aria-modal': 'true',
+            'aria-label': t('panel.title'),
+            style: {
+              width: panelWidth,
+              maxHeight: '78vh',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              background: T.overlay,
+              border: `1px solid ${T.borderStrong}`,
+              borderRadius: 14,
+              boxShadow: '0 18px 48px rgba(0, 0, 0, 0.28)',
+              pointerEvents: 'auto',
+            },
+          },
+          h(
+            'header',
+            {
+              style: {
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 10,
+                padding: '16px 18px 12px',
+                borderBottom: `1px solid ${T.border}`,
+              },
+            },
+            h(
+              'span',
+              {
+                style: {
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 30,
+                  height: 30,
+                  borderRadius: 9,
+                  background: T.surfaceAlt,
+                  color: T.brand,
+                  flex: 'none',
+                },
+              },
+              h(BankIcon, { size: 17 }),
+            ),
+            h(
+              'div',
+              { style: { flex: 1, minWidth: 0 } },
+              h(
+                'div',
+                { style: { fontSize: 15, fontWeight: 600, color: T.text, lineHeight: 1.3 } },
+                t('panel.title'),
+              ),
+              h(
+                'div',
+                { style: { fontSize: 12, color: T.textMuted, marginTop: 2 } },
+                t('panel.subtitle', {
+                  years: EXAMS.length,
+                  topics: SKELETONS.length,
+                  rules: RULES.length,
+                }),
+              ),
+            ),
+            h(
+              'button',
+              {
+                type: 'button',
+                onClick: () => store.set({ open: false }),
+                title: t('panel.close'),
+                'aria-label': t('panel.close'),
+                style: {
+                  appearance: 'none',
+                  width: 28,
+                  height: 28,
+                  borderRadius: 8,
+                  border: '1px solid transparent',
+                  background: 'transparent',
+                  color: T.textMuted,
+                  fontSize: 16,
+                  lineHeight: '1',
+                  cursor: 'pointer',
+                  flex: 'none',
+                },
+                onMouseEnter: (event) => {
+                  event.currentTarget.style.background = T.surfaceAlt;
+                  event.currentTarget.style.color = T.text;
+                },
+                onMouseLeave: (event) => {
+                  event.currentTarget.style.background = 'transparent';
+                  event.currentTarget.style.color = T.textMuted;
+                },
+              },
+              '✕',
+            ),
+          ),
+          h(
+            'div',
+            { style: { padding: '12px 18px 0' } },
+            h('input', {
+              ref: inputRef,
+              type: 'search',
+              value: state.query,
+              placeholder: t('panel.search'),
+              'aria-label': t('panel.search'),
+              onChange: (event) => store.set({ query: event.target.value }),
+              style: {
+                width: '100%',
+                boxSizing: 'border-box',
+                fontSize: 13,
+                color: T.text,
+                background: T.surface,
+                border: `1px solid ${T.border}`,
+                borderRadius: 9,
+                padding: '8px 11px',
+                outline: 'none',
+              },
+            }),
+          ),
+          h(
+            'div',
+            { style: { padding: '10px 18px 0' } },
+            h(TabBar, {
+              tab: state.tab,
+              t,
+              onChange: (tab) => store.set({ tab }),
+            }),
+          ),
+          h(
+            'div',
+            {
+              style: {
+                flex: 1,
+                minHeight: 120,
+                overflowY: 'auto',
+                padding: '12px 18px 16px',
+              },
+            },
+            empty
+              ? h('div', { style: { color: T.textMuted, fontSize: 13, padding: '22px 2px' } }, t('panel.searchEmpty'))
+              : state.tab === 'exam'
+                ? h(ExamList, { exams, t })
+                : state.tab === 'theory'
+                  ? h(TheoryList, { skeletons, t })
+                  : h(RuleList, { rules, t }),
+          ),
+          h(
+            'footer',
+            {
+              style: {
+                padding: '10px 18px',
+                borderTop: `1px solid ${T.border}`,
+                fontSize: 12,
+                color: T.textMuted,
+              },
+            },
+            t('panel.footer'),
+          ),
+        ),
       );
     }
 
@@ -388,11 +831,24 @@ window.__ModuleLoader__.load({
         } catch (error) {
           ctx.logger?.warn?.('ruankao-essay: locale 不可用，使用内置文案：' + String(error));
         }
-        ctx.slots.inject('conversation.composer.dock', () => ctx.slots.register({
-          name: 'conversation.composer.dock',
+
+        const store = createStore();
+
+        // 入口：composer 工具行左侧的紧凑图标按钮（不再占用 composer 下方的环境条目位）。
+        ctx.slots.inject('conversation.input.left', () => ctx.slots.register({
+          name: 'conversation.input.left',
           id: 'ruankao-topic-bank',
-          order: 6,
-        }, (props) => h(TopicBank, { ...props, t })));
+          order: 10,
+          label: t('launcher.title'),
+        }, (props) => h(Launcher, { ...props, store, t })));
+
+        // 本体：shell.overlay 里的居中模态卡，遮罩点击或 Esc 关闭。
+        ctx.slots.inject('shell.overlay', () => ctx.slots.register({
+          name: 'shell.overlay',
+          id: 'ruankao-topic-bank-panel',
+          order: 20,
+          label: t('panel.title'),
+        }, (props) => h(TopicBankPanel, { ...props, store, t })));
       },
     };
   },

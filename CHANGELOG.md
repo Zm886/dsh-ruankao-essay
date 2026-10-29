@@ -5,6 +5,13 @@
 
 ## [Unreleased]
 
+### 界面重构（本轮）
+
+- **题库面板改为模态卡**：原先在 `conversation.composer.dock`（宿主语义是「composer 卡片下方的环境小条目」）里内联展开，既撑高输入区、又与宿主视觉不一致。现改为：入口是 `conversation.input.left` 工具行左侧的 28px 图标按钮，题库本体是 `shell.overlay` 里的居中模态卡（点遮罩或按 Esc 关闭，打开后自动聚焦搜索框）。
+- **改用宿主主题 token**：样式从写死的灰色 `rgba(127,127,127,…)` 改为 `--dsh-alias-*`（bg-overlay／bg-layer-1／border-l1／brand-primary／label-primary…），亮暗主题自动跟随。
+- **内容可扫读 + 可检索**：真题按场次分卡片、试题编号化，理论骨架按卡片分组；新增跨页签搜索框与空结果提示，替代原先「年份 + 顿号连排」的整段文本。
+- **交互细节**：下划线式页签、hover 态、`aria-label`／`aria-expanded`／`aria-modal`、Esc 关闭；`shell.overlay` 整层是 click-through，故遮罩与卡片显式 `pointerEvents: 'auto'` opt-in。
+
 ### 单一来源与清理（本轮）
 
 - **题库数据单一来源**：新增 `assets/ruankao-essay-bank/references/topic-index.json`（真题题名／理论骨架／写作规格的唯一数据源）与生成器 `scripts/build-client-data.mjs`，`topic-index-lite.md` 与 Client 面板的对应内容改为从它生成。此前两份内容各写一遍，已经漂移过。

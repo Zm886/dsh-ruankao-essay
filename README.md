@@ -10,7 +10,7 @@
 - **插件名（包名）**：`dsh-ruankao-essay`
 - **Host 插件行 id**：`ruankao-essay`
 - **提供的技能**：`ruankao-essay-writing`（写作／改写总纲）、`ruankao-essay-bank`（题库与写作规范）、`ruankao-essay-review`（逐段自评与改写建议）
-- **Client 半**：`client.js`，在 `conversation.composer.dock` 注册「题库速查」面板
+- **Client 半**：`client.js`，在 `conversation.input.left` 注册题库入口按钮，在 `shell.overlay` 注册题库模态卡（遮罩 + Esc 关闭 + 搜索 + 三页签）
 - **形态**：Host 半纯 JS 无依赖、无构建步骤；Client 半是单文件浏览器模块
 - **版本**：0.1.0，变更见 [CHANGELOG.md](CHANGELOG.md)　·　安全策略见 [SECURITY.md](SECURITY.md)　·　贡献指南见 [CONTRIBUTING.md](CONTRIBUTING.md)
 
@@ -26,7 +26,7 @@
 
 两者配合的完整链路：**查题 → 定骨架 → 配实例 → 成稿 → 自检 → 生成 .doc**。
 
-此外，插件在 DSH Web UI 的对话输入区上方提供一个**题库速查面板**：点开后可切换「历年真题 / 题型骨架 / 写作规格」三个页签，用于在写之前快速定位题目与要点（内容与仓库内的公开版索引一致）。
+此外，插件在 DSH Web UI 的**输入框工具行左侧**放一个题库图标，点开是**居中的题库模态卡**：顶部搜索框（跨三个页签实时过滤），下面「历年真题 / 题型骨架 / 写作规格」三个页签，点遮罩或按 Esc 关闭。样式全部使用宿主主题 token（`--dsh-alias-*`），自动跟随亮暗主题（内容与仓库内的公开版索引一致）。
 
 ## 二、安装
 
@@ -83,7 +83,7 @@ dsh-ruankao-essay/
 ├─ package.json          # dsh.bundle.patch、meta、icon、files、repository
 ├─ cordis.patch.yml      # 向 profile 插入 id: ruankao-essay 的 Host 插件行
 ├─ index.js              # Cordis 插件：ctx.skills.registerProvider(...) 注册三个技能
-├─ client.js             # Client 半：在 Web UI 注册题库速查面板
+├─ client.js             # Client 半：题库入口按钮（input.left）+ 题库模态卡（shell.overlay）
 ├─ icon.svg              # 插件卡片图标
 ├─ locale/{zh,en}.json   # 插件卡片标题与描述
 ├─ CHANGELOG.md          # 版本变更记录
