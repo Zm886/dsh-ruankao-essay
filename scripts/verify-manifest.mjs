@@ -204,6 +204,7 @@ for (const generator of generators) {
 // 6) references/ 下只允许公开文件进入版本控制（本地资料用 .git/info/exclude 忽略）
 const PUBLIC_REFERENCES = new Set([
   "assets/ruankao-essay-bank/references/topic-index-lite.md",
+  "assets/ruankao-essay-bank/references/topic-index.json",
   "assets/ruankao-essay-writing/references/writing-rules.md",
 ]);
 try {
